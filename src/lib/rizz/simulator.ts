@@ -33,7 +33,8 @@ export type SimState = {
 export type SimEnding = 'checkmate' | 'resign' | 'left-on-read';
 
 /** Interest at which the other person is won over: the game is checkmate */
-export const SIM_WIN_INTEREST = 95;
+export const SIM_WIN_INTEREST = 85;
+export const SIM_LOSE_INTEREST = 8;
 
 export const getOpponentElo = (state: SimState) =>
   getRizzPersona(state.personaId).elo + (RIZZ_DIFFICULTIES.find((item) => item.id === state.difficulty)?.eloShift ?? 0);
@@ -48,19 +49,23 @@ export function applyVerdict(state: SimState, verdict: RizzVerdict): {state: Sim
 }
 
 /** The state after the other person's answer: interest decides whether the game is over. */
-export function applyInterest(state: SimState, interest: number): SimState {
+export function applyInterest(state: SimState, interest: number, status?: SimStatus): SimState {
   let ending = state.ending;
-  if(!ending && interest >= SIM_WIN_INTEREST) ending = 'checkmate';
-  else if(!ending && interest <= 0) ending = 'left-on-read';
-  return {...state, interest, ending};
+  // the other person says when it is over (a date agreed, a goodbye); the interest number is the net under it
+  if(!ending && (status === 'won' || interest >= SIM_WIN_INTEREST)) ending = 'checkmate';
+  else if(!ending && (status === 'lost' || interest <= SIM_LOSE_INTEREST)) ending = 'left-on-read';
+  return {...state, interest: ending === 'checkmate' ? Math.max(interest, 100) : ending === 'left-on-read' ? Math.min(interest, SIM_LOSE_INTEREST) : interest, ending};
 }
+
+/** What the other person says about the chat: still going, won over, or done with it. */
+export type SimStatus = 'continue' | 'won' | 'lost';
 
 export const SIM_MAX_USER_MESSAGES = 30;
 
 const DIFFICULTY_RULES: Record<RizzDifficulty, string> = {
-  easy: 'Be forgiving: reward decent effort with +4..+10 interest, a poor message costs at most -5.',
-  medium: 'Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10.',
-  hard: 'Be picky: only a genuinely good message earns +3..+8, bland ones cost -2..-5, a bad one -8..-18. Never exceed 85 interest before the 8th message.'
+  easy: 'Be forgiving: decent effort earns +6..+14 interest, a poor message costs at most -5.',
+  medium: 'Be fair: a good message is +5..+12, a bland one 0..-3, a bad one -5..-10.',
+  hard: 'Be picky: only a genuinely good message earns +4..+9, bland ones cost -2..-5, a bad one -8..-18.'
 };
 
 function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty) {
@@ -69,9 +74,9 @@ function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty) {
 Character: ${persona.name}. ${persona.prompt}
 
 Style: you are texting on a phone. Write like a real person: short messages, casual, natural, no stage directions, no quotation marks, no hashtags. Usually one message, sometimes two short ones; each under 20 words, like a real text, never a paragraph. Match the language the user writes in.
-Ending: if the user clearly wins you over (a date or a number agreed, or you are completely sold), set interest to 100. If they lose you for good, set it to 0.
+Ending the chat: set "status" to "won" as soon as the user has WON you over: you agree to meet, go on a date, give your number or a clear yes to what they proposed, or you are plainly sold (do not make them ask twice). Set "status" to "lost" when you decide you are done with this conversation (a goodbye, a block, "it's over"). Otherwise "continue". When won set interest to 100, when lost 0.
 Interest: you track a hidden "interest" number 0..100 in how much you like talking to the user. ${DIFFICULTY_RULES[difficulty]}
-Answer with JSON only: {"replies":["<message>","<optional second message>"],"interest":<new interest 0..100>}`;
+Answer with JSON only: {"replies":["<message>","<optional second message>"],"interest":<new interest 0..100>,"status":"continue|won|lost"}`;
 }
 
 export function createSimulation(personaId: string, difficulty: RizzDifficulty): SimState {
@@ -86,24 +91,29 @@ function transcript(messages: SimMessage[]) {
   }));
 }
 
+const toStatus = (value: unknown): SimStatus | undefined => {
+  const status = String(value || '').toLowerCase();
+  return status === 'won' || status === 'lost' || status === 'continue' ? status : undefined;
+};
+
 /**
  * What a persona model answered: the JSON asked for, or what can be salvaged of a broken one
  * (`{"replies":["hey"],"interest":40..100":40}`). Raw JSON is never a message.
  */
-export function parsePersonaAnswer(answer: string): {replies: string[], interest?: number} {
+export function parsePersonaAnswer(answer: string): {replies: string[], interest?: number, status?: SimStatus} {
   const parsed = parseModelJson<{replies?: string[] | string, reply?: string, interest?: number}>(answer);
   const clean = (list: unknown[]) => list.filter((reply): reply is string => typeof reply === 'string' && !!reply.trim()).map((reply) => reply.trim());
   if(parsed && typeof parsed === 'object') {
     const raw = parsed.replies ?? parsed.reply;
     const replies = clean(Array.isArray(raw) ? raw : [raw]);
-    if(replies.length) return {replies, interest: Number.isFinite(Number(parsed.interest)) ? Number(parsed.interest) : undefined};
+    if(replies.length) return {replies, interest: Number.isFinite(Number(parsed.interest)) ? Number(parsed.interest) : undefined, status: toStatus((parsed as any).status)};
   }
 
   if(/^\s*[{[`]/.test(answer) || /"replies"\s*:/.test(answer)) {
     const block = answer.match(/"replies?"\s*:\s*\[?([^\]}]*)/)?.[1] ?? '';
     const replies = clean([...block.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1].replace(/\\"/g, '"')));
     const interest = answer.match(/"interest"\s*:\s*(\d+)/)?.[1];
-    return {replies, interest: interest !== undefined ? Number(interest) : undefined};
+    return {replies, interest: interest !== undefined ? Number(interest) : undefined, status: toStatus(answer.match(/"status"\s*:\s*"(\w+)"/)?.[1])};
   }
 
   return {replies: clean([answer])};
@@ -125,10 +135,10 @@ export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
     ]
   });
 
-  const {replies, interest: answered} = parsePersonaAnswer(answer);
+  const {replies, interest: answered, status} = parsePersonaAnswer(answer);
   const interest = answered !== undefined ? Math.min(100, Math.max(0, Math.round(answered))) : state.interest;
   if(!replies.length) throw new Error('They did not answer. Send again.');
-  return {replies: replies.slice(0, 2).map((reply) => reply.trim().slice(0, 500)), interest};
+  return {replies: replies.slice(0, 2).map((reply) => reply.trim().slice(0, 500)), interest, status};
 }
 
 /** Grades the message at `index` of the simulation in the context of what came before it. */

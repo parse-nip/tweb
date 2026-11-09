@@ -154,7 +154,16 @@ describe('rizz Elo and checkmate', () => {
     expect(applyVerdict(state, {rating: 'checkmate', elo: 2800}).state.ending).toBe('checkmate');
     expect(applyVerdict(state, {rating: 'resign', elo: 100}).state.ending).toBe('resign');
     expect(applyInterest(state, 96).ending).toBe('checkmate');
+    expect(applyInterest(state, 86).ending).toBe('checkmate');
+    expect(applyInterest(state, 50, 'won').ending).toBe('checkmate');
+    expect(applyInterest(state, 50, 'lost').ending).toBe('left-on-read');
     expect(applyInterest(state, 0).ending).toBe('left-on-read');
     expect(applyInterest(state, 60).ending).toBeUndefined();
+    expect(applyInterest(state, 60, 'continue').ending).toBeUndefined();
+
+    const {calibrate} = await import('@lib/rizz/classifier');
+    // an unsure Miss between Good and Great is not a Miss
+    expect(calibrate({miss: 0.33, good: 0.32, great: 0.3}, 'miss')).not.toBe('miss');
+    expect(calibrate({blunder: 0.4, mistake: 0.4, inaccuracy: 0.2}, 'blunder')).toBe('mistake');
   });
 });

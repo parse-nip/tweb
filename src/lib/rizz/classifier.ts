@@ -1,5 +1,5 @@
 import {openRouterComplete, openRouterDecide, parseModelJson, RizzDecisionQuestions} from '@lib/rizz/openrouter';
-import {clampElo, getRizzRatingDef, isRizzRating, RIZZ_RATINGS, RizzVerdict} from '@lib/rizz/ratings';
+import {clampElo, getRizzRatingDef, isRizzRating, RIZZ_RATINGS, type RizzRating, RizzVerdict} from '@lib/rizz/ratings';
 import {getRizzSettings} from '@lib/rizz/settings';
 
 export type RizzLine = {
@@ -32,6 +32,24 @@ const ELO_ANCHORS = [
   'An exceptional message that turns the whole chat, around 2600 Elo'
 ];
 
+export function calibrate(probabilities: Record<string, number> | undefined, rating: RizzRating): RizzRating {
+  const inPlay = Object.entries(probabilities || {}).filter(([id, probability]) => probability >= 0.08 && isRizzRating(id));
+  const total = inPlay.reduce((sum, [, probability]) => sum + probability, 0);
+  if(!total) return rating;
+  const expected = inPlay.reduce((sum, [id, probability]) => sum + probability * getRizzRatingDef(id).accuracy, 0) / total;
+  let best = rating, distance = Infinity;
+  for(const [id] of inPlay) {
+    if(id === 'checkmate' || id === 'resign') continue;
+    const gap = Math.abs(getRizzRatingDef(id).accuracy - expected);
+    if(gap < distance) {
+      distance = gap;
+      best = id as RizzRating;
+    }
+  }
+
+  return best;
+}
+
 async function decideLine(lines: RizzLine[], mid: number, model: string, signal?: AbortSignal): Promise<RizzVerdict | undefined> {
   const line = lines.find((other) => other.mid === mid);
   const earlier = lines.filter((other) => other.mid < mid).slice(-14);
@@ -59,8 +77,11 @@ async function decideLine(lines: RizzLine[], mid: number, model: string, signal?
     }
   });
 
-  const rating = answer?.answers?.rating?.choice;
+  let rating = answer?.answers?.rating?.choice;
   if(!isRizzRating(rating)) return;
+  // an unsure call is not a verdict: it moves to the label nearest the probability-weighted result of the labels in play
+  const confidence = Number(answer.answers.rating.confidence);
+  if(confidence < 0.5 && rating !== 'checkmate' && rating !== 'resign') rating = calibrate(answer.answers.rating.probabilities, rating);
   const score = Number(answer.answers.strength?.score);
   return {
     rating,

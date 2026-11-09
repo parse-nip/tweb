@@ -95,19 +95,84 @@
   .typing-dots i { width: .4375rem; height: .4375rem; border-radius: 50%; background: var(--secondary); opacity: .5; animation: bounce 1s infinite; } .typing-dots i:nth-child(2) { animation-delay: .15s; } .typing-dots i:nth-child(3) { animation-delay: .3s; }
   @keyframes bounce { 40% { transform: translateY(-3px); opacity: 1; } }
   .banner { align-self: center; margin: .5rem 0; padding: .375rem .875rem; border-radius: 1rem; background: var(--chip); color: #fff; font-size: .875rem; font-weight: 500; text-align: center; }
+  .tools { flex: none; display: flex; gap: .375rem; padding: .375rem .5rem; background: var(--bar); overflow-x: auto; z-index: 5; scrollbar-width: none; }
+  .tools::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: inline-flex; align-items: center; gap: .3125rem; border: 0; border-radius: 1rem; padding: .3125rem .75rem; background: rgba(255,255,255,.18); color: #fff; font: inherit; font-size: .8125rem; font-weight: 500; cursor: pointer; white-space: nowrap; position: relative; }
+  .chip:hover { background: rgba(255,255,255,.28); } .chip small { opacity: .75; font-weight: 400; }
+  .chip.accent { background: #fff; color: #2b5f87; }
+  .chip .d { font-weight: 700; } .chip .d.up { color: #8ff0a4; } .chip.accent .d.up { color: #1f9d4a; } .d.down { color: #ffb3b3; } .chip.accent .d.down { color: #c0392b; }
+  .float { position: absolute; left: 50%; top: -.25rem; transform: translateX(-50%); font-weight: 700; pointer-events: none; animation: floatup 1.4s ease-out forwards; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  @keyframes floatup { to { transform: translate(-50%, -1.5rem); opacity: 0; } }
+  .dl { margin-inline-end: .375rem; font-weight: 600; font-size: .75rem; } .dl.up { color: #2f9e55; } .dl.down { color: #d04b4b; }
+  .tipsbox { flex: none; margin: .5rem .75rem 0; padding: .625rem .75rem; border-radius: .75rem; background: var(--surface); box-shadow: 0 1px 2px rgba(16,35,47,.15); font-size: .875rem; line-height: 1.4; z-index: 4; position: relative; }
+  .tipsbox b { font-weight: 500; } .tipsbox ol { margin: .25rem 0 .375rem; padding-inline-start: 1.125rem; } .tipsbox button { border: 0; background: transparent; color: var(--primary); font: inherit; font-weight: 500; cursor: pointer; padding: 0; }
+  .seg { display: flex; gap: .25rem; padding: .1875rem; border-radius: .625rem; background: rgba(128,128,128,.14); } .seg button { flex: 1; border: 0; border-radius: .5rem; padding: .4375rem; background: transparent; color: inherit; font: inherit; cursor: pointer; } .seg button.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.2); font-weight: 500; }
+  .big { text-align: center; } .big b { display: block; font-size: 2.75rem; line-height: 1.1; font-weight: 500; } .big small { color: var(--secondary); }
+  .chart { width: 100%; height: 9rem; display: block; } .cap { margin: 0; font-size: .8125rem; color: var(--secondary); }
+  .line { padding: .625rem .75rem; border-radius: .75rem; background: rgba(128,128,128,.1); display: flex; flex-direction: column; gap: .375rem; }
+  .line .top { display: flex; gap: .5rem; align-items: flex-start; } .line .top img { flex: none; width: 1.5rem; height: 1.6rem; } .line .top q { flex: 1; quotes: none; font-weight: 500; } .line .top .dl { margin: 0; flex: none; }
+  .line .note { font-size: .9375rem; line-height: 1.4; } .line .better { font-size: .875rem; color: var(--primary); cursor: pointer; background: rgba(51,144,236,.1); border-radius: .625rem; padding: .375rem .625rem; }
+  .line .lab { font-size: .8125rem; color: var(--secondary); }
+  .over { position: absolute; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,.5); overflow: hidden; }
+  .over.on { display: flex; animation: fade .2s; }
+  .card { position: relative; width: 100%; max-width: 21rem; max-height: 100%; overflow-y: auto; border-radius: 1.25rem; background: var(--surface); color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,.35); animation: cardin .38s cubic-bezier(.2,1.1,.3,1); }
+  @keyframes cardin { from { transform: scale(.82) translateY(24px); opacity: 0; } }
+  .card .head { padding: 1.5rem 1.25rem 1rem; text-align: center; color: #fff; background: linear-gradient(160deg, var(--hc1), var(--hc2)); border-radius: 1.25rem 1.25rem 0 0; }
+  .card.win { --hc1: #81b64c; --hc2: #4f8a2d; } .card.lose { --hc1: #5b6670; --hc2: #2f363c; } .card.resign { --hc1: #8b8f94; --hc2: #5a5e63; }
+  .card .head img { width: 4.25rem; height: 4.5rem; display: block; margin: 0 auto .5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)); animation: stamp .55s cubic-bezier(.2,1.6,.4,1) .15s both; }
+  @keyframes stamp { from { transform: scale(2.4) rotate(-14deg); opacity: 0; } }
+  .card .head h3 { margin: 0; font-size: 1.5rem; font-weight: 500; } .card .head p { margin: .25rem 0 0; opacity: .9; font-size: .9375rem; }
+  .card .vs { display: flex; align-items: center; justify-content: space-around; padding: 1rem .75rem .25rem; }
+  .card .pl { text-align: center; min-width: 6rem; } .card .pl .av { width: 3.25rem; height: 3.25rem; margin: 0 auto .25rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; background: linear-gradient(#7cb7f3, #3b82d6); color: #fff; font-weight: 500; }
+  .card .pl.them .av { background: linear-gradient(#ff9a6a, #e0586b); } .card .pl b { display: block; font-weight: 500; font-size: .9375rem; } .card .pl small { color: var(--secondary); }
+  .card .vs .x { color: var(--secondary); font-size: .8125rem; }
+  .card .rate { text-align: center; padding: .5rem 1rem 0; } .card .rate .num { font-size: 2.5rem; font-weight: 500; line-height: 1.1; } .card .rate .dd { font-size: 1.125rem; font-weight: 700; margin-inline-start: .375rem; } .dd.up { color: #2f9e55; } .dd.down { color: #d04b4b; }
+  .card .rate small { display: block; color: var(--secondary); font-size: .8125rem; }
+  .card .mini { display: flex; gap: .5rem; padding: .75rem 1rem 0; } .card .mini div { flex: 1; text-align: center; padding: .5rem .25rem; border-radius: .75rem; background: rgba(128,128,128,.12); } .card .mini b { display: block; font-size: 1.25rem; font-weight: 500; } .card .mini small { color: var(--secondary); font-size: .75rem; }
+  .card .counts { padding: .75rem 1rem 0; justify-content: center; }
+  .card .acts { display: flex; flex-direction: column; padding: .75rem .5rem .5rem; }
+  .card .acts button { border: 0; background: transparent; color: var(--primary); font: inherit; font-weight: 500; text-transform: uppercase; letter-spacing: .03em; font-size: .875rem; padding: .8125rem; border-radius: .75rem; cursor: pointer; }
+  .card .acts button:hover { background: rgba(51,144,236,.08); } .card .acts .main { background: var(--primary); color: #fff; margin-bottom: .125rem; } .card .acts .main:hover { background: var(--primary); filter: brightness(1.08); }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; } .confetti i { position: absolute; top: -1rem; width: .5rem; height: .875rem; border-radius: 1px; opacity: .95; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  /* the badge: hover (or tap) rolls the icon over and stretches it into a pill that names the label; the explanation slides in beside it */
+  .badge { --c: #96af8b; position: absolute; top: -.7rem; width: auto; height: 1.5rem; display: flex; align-items: center; border-radius: .75rem; background: transparent; cursor: pointer; z-index: 3; transition: background .22s, box-shadow .22s, transform .22s; outline: none; transform: none; }
+  .badge:hover, .badge:focus-visible, .badge.open { transform: none; }
+  .msg.in .badge { flex-direction: row-reverse; }
+  .badge .ball { flex: none; width: 1.5rem; height: 1.6rem; display: block; transition: transform .5s cubic-bezier(.3,1.4,.5,1); pointer-events: none; }
+  .badge .lbl { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; color: #fff; font-size: .75rem; font-weight: 600; letter-spacing: .01em; transition: max-width .34s cubic-bezier(.3,1.1,.4,1), opacity .2s .06s, padding .3s; padding: 0; }
+  .badge .lbl i { font-style: normal; margin-inline-start: .375rem; padding: 0 .3125rem; border-radius: .5rem; background: rgba(0,0,0,.22); }
+  .badge:hover, .badge:focus-visible, .badge.open { background: var(--c); box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 6; }
+  .badge:hover .lbl, .badge:focus-visible .lbl, .badge.open .lbl { max-width: 12rem; opacity: 1; padding-inline: .125rem .625rem; }
+  .msg.in .badge:hover .lbl, .msg.in .badge:focus-visible .lbl, .msg.in .badge.open .lbl { padding-inline: .625rem .125rem; }
+  .badge:hover .ball, .badge:focus-visible .ball, .badge.open .ball { transform: rotate(360deg); }
+  .msg.in .badge:hover .ball, .msg.in .badge:focus-visible .ball, .msg.in .badge.open .ball { transform: rotate(-360deg); }
+  .badge .why { position: absolute; bottom: calc(100% + .5rem); width: 15rem; padding: .625rem .75rem; border-radius: .875rem; background: var(--surface); color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,.28); font-size: .875rem; line-height: 1.35; font-weight: 400; text-align: start; white-space: normal; opacity: 0; transform: translateY(6px) scale(.96); transform-origin: bottom left; pointer-events: none; transition: opacity .2s .1s, transform .28s cubic-bezier(.3,1.3,.5,1) .08s; }
+  .msg.out .badge .why { inset-inline-start: 0; } .msg.in .badge .why { inset-inline-end: 0; transform-origin: bottom right; }
+  .badge.flip .why { bottom: auto; top: calc(100% + .5rem); transform: translateY(-6px) scale(.96); transform-origin: top left; }
+  .badge:hover .why, .badge:focus-visible .why, .badge.open .why { opacity: 1; transform: none; pointer-events: auto; }
+  .badge .why .wt { display: flex; align-items: center; gap: .375rem; font-weight: 500; margin-bottom: .1875rem; } .badge .why .wt::before { content: ''; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: var(--c); }
+  .badge .why .ws { color: var(--secondary); font-size: .75rem; margin-bottom: .25rem; } .badge .why .wd { color: var(--text); opacity: .85; }
+  .badge.pending { width: 1.5rem; border-radius: 50%; background: rgba(128,128,128,.6); justify-content: center; }
+  @media (prefers-reduced-motion: reduce) { .badge .ball, .badge .lbl, .badge .why { transition: none; } }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <div class="bar">
-    <button class="avatar" id="avatar" style="border:0;font-size:1.5rem;cursor:pointer" title="Change who you're texting" aria-label="Change who you're texting">🙄</button>
+    <button class="avatar" id="avatar" style="border:0;font-size:1.5rem;cursor:pointer" title="Change opponent" aria-label="Change opponent">🙄</button>
     <div class="who" id="who" style="cursor:pointer"><b id="name">The Sarcastic Comedian</b><small id="status">online</small></div>
-    <button class="icon-btn" id="hintBtn" title="Hint" aria-label="Hint">💡</button>
-    <button class="icon-btn" id="reviewBtn" title="End &amp; review" aria-label="End and review">📊</button>
     <button class="icon-btn" id="legendBtn" title="All labels" aria-label="All labels">♟</button>
     <button class="icon-btn" id="themeBtn" title="Theme" aria-label="Theme">◐</button>
   </div>
-  <div class="meterbar"><div class="row"><span id="mood">Interest</span><span id="int">♟ 800 Elo · 40%</span></div><div class="m"><i id="fill"></i></div></div>
+  <div class="tools" id="tools">
+    <button class="chip accent" id="eloChip" title="Your rating"><span>♟ <b id="eloNum">800</b></span><span class="d" id="eloD"></span></button>
+    <button class="chip" id="oppChip" title="Change opponent or difficulty"><span id="oppTxt">vs Sarcastic</span><small id="oppElo">1300</small> ▾</button>
+    <button class="chip" id="hintBtn" title="Three ideas for your next message">💡 Hint</button>
+    <button class="chip" id="reviewBtn" title="The coach goes through your messages line by line">📋 Coach review</button>
+    <button class="chip" id="newBtn" title="Start a new game with the same opponent">↻ New game</button>
+  </div>
+  <div class="meterbar"><div class="row"><span id="mood">Interest</span><span id="int">40%</span></div><div class="m"><i id="fill"></i></div></div>
   <div class="chat" id="chat"></div>
   <div class="tips" id="tips"></div>
   <div class="composer">
@@ -118,7 +183,7 @@
     </div>
     <button class="send" id="send" aria-label="Send">➤</button>
   </div>
-  <div class="toast" id="toast"></div>
+    <div class="over" id="over"></div>
   <div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
 </div>
 
@@ -127,36 +192,41 @@
 const API = '/api/openrouter';
 const JEV = 'typesafe/jev-1.13';
 const FAST = 'google/gemini-2.5-flash-lite';
+const FALLBACKS = [FAST, 'google/gemini-2.5-flash', 'openai/gpt-4.1-nano'];
+const STORE = 'rizz-demo:v2';
 
 const LABELS = [
-  ['brilliant', 'Brilliant', 'rare, genuinely clever or emotionally perfect: witty, disarming, escalates the vibe without trying too hard', 100],
-  ['great', 'Great', 'a strong message that moves the conversation forward, shows personality, or turns the chat around', 92],
-  ['best', 'Best', 'the best reply available in this position', 88],
-  ['excellent', 'Excellent', 'a very good message, close to the best one', 80],
-  ['good', 'Good', 'fine and natural, but nothing special', 65],
-  ['book', 'Book', 'a standard, expected message (greetings, small talk, logistics)', 60],
-  ['forced', 'Forced', 'the only sensible thing to say (a direct question that must be answered, a thank-you, an apology owed)', 70],
-  ['inaccuracy', 'Inaccuracy', 'a bit off: dry, a little needy, or a missed chance', 40],
-  ['mistake', 'Mistake', 'a message that hurts the vibe: awkward, boring, try-hard, or pushy', 25],
-  ['miss', 'Miss', 'ignored an obvious opening or question, or dodged what they were offering', 20],
-  ['blunder', 'Blunder', 'a conversation-killer: rude, creepy, desperate, passive-aggressive or offensive', 0],
-  ['checkmate', 'Checkmate', "ends the conversation in the user's favour: a date agreed, a number given, a perfect last word. Very rare", 100],
-  ['resign', 'Resign', 'gives up: a surrender, an apology spiral, "forget it", "never mind"', 0]
+  ['brilliant', 'Brilliant', 'rare, genuinely clever or emotionally perfect: witty, disarming, escalates the vibe without trying too hard', 100, '#1baca6'],
+  ['great', 'Great', 'a strong message that moves the conversation forward, shows personality, or turns the chat around', 92, '#5c8bb0'],
+  ['best', 'Best', 'the best reply available in this position', 88, '#81b64c'],
+  ['excellent', 'Excellent', 'a very good message, close to the best one', 80, '#81b64c'],
+  ['good', 'Good', 'fine and natural, but nothing special', 65, '#95b776'],
+  ['book', 'Book', 'a standard, expected message (greetings, small talk, logistics)', 60, '#a88865'],
+  ['forced', 'Forced', 'the only sensible thing to say (a direct question that must be answered, a thank-you, an apology owed)', 70, '#97af8b'],
+  ['inaccuracy', 'Inaccuracy', 'a bit off: dry, a little needy, or a missed chance', 40, '#f7c631'],
+  ['mistake', 'Mistake', 'a message that hurts the vibe: awkward, boring, try-hard, or pushy', 25, '#e58f2a'],
+  ['miss', 'Miss', 'ignored an obvious opening or question, or dodged what they were offering', 20, '#ca3431'],
+  ['blunder', 'Blunder', 'a conversation-killer: rude, creepy, desperate, passive-aggressive or offensive', 0, '#ca3431'],
+  ['checkmate', 'Checkmate', "ends the conversation in the user's favour: a date agreed, a number given, a perfect last word. Very rare", 100, '#3d4249'],
+  ['resign', 'Resign', 'gives up: a surrender, an apology spiral, "forget it", "never mind"', 0, '#6e747b']
 ];
-const L = Object.fromEntries(LABELS.map(([id, title, hint, acc]) => [id, {id, title, hint, acc}]));
+const L = Object.fromEntries(LABELS.map(([id, title, hint, acc, color]) => [id, {id, title, hint, acc, color}]));
 const iconUrl = (id, dark) => 'icons/' + ((dark && (id === 'checkmate' || id === 'resign')) ? id + '-black' : id) + '.svg';
 
 const PERSONAS = [
-  {id: 'sarcastic', elo: 1300, e: '🙄', name: 'The Sarcastic Comedian', tag: 'Roasts everything, respects a quick comeback', start: 40, open: 'oh look, a stranger with a phone. impressive.', prompt: 'You are sarcastic, quick and teasing. You roast the user lightly and respect witty comebacks and confidence. You are bored by try-hard compliments and needy messages. Never cruel, always playful.'},
-  {id: 'shy', elo: 700, e: '📚', name: 'The Shy Bookworm', tag: 'Short answers, warms up to genuine curiosity', start: 45, open: 'um, hi. sorry, i was reading. hello', prompt: 'You are shy and a bit awkward, a bookworm. You answer briefly at first, use "haha" and "um", and open up when the user asks specific, genuine questions. Generic pickup lines or pressure make you retreat.'},
-  {id: 'hardtoget', elo: 1500, e: '🧊', name: 'The Hard-to-Get', tag: 'Slow, low effort, you must earn it', start: 25, open: 'hey', prompt: 'You are hard to get: few words, rarely ask questions back, mildly unimpressed. Your interest only climbs when the user is confident, funny, specific and not desperate. Double-texting and neediness drop it fast.'},
-  {id: 'flirt', elo: 1600, e: '😏', name: 'The Confident Flirt', tag: 'Flirts back hard, tests your frame', start: 60, open: "well well. you finally texted. i was starting to think you'd lost my number", prompt: 'You are a confident flirt used to attention. You tease, flirt back and test whether the user can hold their frame. Boring or safe messages bore you; bold, playful ones thrill you.'},
-  {id: 'dry', elo: 1000, e: '🪨', name: 'The Dry Texter', tag: '"lol", "k", "yeah" — you do the heavy lifting', start: 35, open: 'yo', prompt: 'You are a dry texter: lowercase, one-to-four word replies, "lol", "yeah", "ok" — not actually uninterested, just no effort. A truly funny message or a question worth answering makes you write a full sentence.'},
-  {id: 'ex', elo: 1400, e: '💔', name: 'The Ex Who Left You on Read', tag: 'Recover it with zero desperation', start: 20, open: 'oh. hi. i saw your messages. i was busy', prompt: "You are the user's ex. You left them on read last week. Guarded, a little curious, a little proud. Apologising too much, guilt-tripping or anger make you leave; calm, funny, self-aware messages thaw you."}
+  {id: 'sarcastic', elo: 1300, e: '🙄', name: 'The Sarcastic Comedian', short: 'Sarcastic', tag: 'Roasts everything, respects a quick comeback', start: 40, open: 'oh look, a stranger with a phone. impressive.', prompt: 'You are sarcastic, quick and teasing. You roast the user lightly and respect witty comebacks and confidence. You are bored by try-hard compliments and needy messages. Never cruel, always playful.'},
+  {id: 'shy', elo: 700, e: '📚', name: 'The Shy Bookworm', short: 'Bookworm', tag: 'Short answers, warms up to genuine curiosity', start: 45, open: 'um, hi. sorry, i was reading. hello', prompt: 'You are shy and a bit awkward, a bookworm. You answer briefly at first, use "haha" and "um", and open up when the user asks specific, genuine questions. Generic pickup lines or pressure make you retreat.'},
+  {id: 'hardtoget', elo: 1500, e: '🧊', name: 'The Hard-to-Get', short: 'Hard-to-Get', tag: 'Slow, low effort, you must earn it', start: 25, open: 'hey', prompt: 'You are hard to get: few words, rarely ask questions back, mildly unimpressed. Your interest only climbs when the user is confident, funny, specific and not desperate. Double-texting and neediness drop it fast.'},
+  {id: 'flirt', elo: 1600, e: '😏', name: 'The Confident Flirt', short: 'Flirt', tag: 'Flirts back hard, tests your frame', start: 60, open: "well well. you finally texted. i was starting to think you'd lost my number", prompt: 'You are a confident flirt used to attention. You tease, flirt back and test whether the user can hold their frame. Boring or safe messages bore you; bold, playful ones thrill you.'},
+  {id: 'dry', elo: 1000, e: '🪨', name: 'The Dry Texter', short: 'Dry Texter', tag: '"lol", "k", "yeah" — you do the heavy lifting', start: 35, open: 'yo', prompt: 'You are a dry texter: lowercase, one-to-four word replies, "lol", "yeah", "ok" — not actually uninterested, just no effort. A truly funny message or a question worth answering makes you write a full sentence.'},
+  {id: 'ex', elo: 1400, e: '💔', name: 'The Ex Who Left You on Read', short: 'The Ex', tag: 'Recover it with zero desperation', start: 20, open: 'oh. hi. i saw your messages. i was busy', prompt: "You are the user's ex. You left them on read last week. Guarded, a little curious, a little proud. Apologising too much, guilt-tripping or anger make you leave; calm, funny, self-aware messages thaw you."}
 ];
+const DIFFS = [['easy', 'Easy', -200, 'Forgiving: interest rises readily, small mistakes cost little.'], ['medium', 'Medium', 0, 'Fair: good messages are rewarded, bad ones are noticed.'], ['hard', 'Hard', 300, 'Picky: only genuinely good messages move them; mistakes cost a lot.']];
+const DIFF_RULES = {easy: 'Be forgiving: decent effort earns +6..+14 interest, a poor message costs at most -5.', medium: 'Be fair: a good message is +5..+12, a bland one 0..-3, a bad one -5..-10.', hard: 'Be picky: only a genuinely good message earns +4..+9, bland ones cost -2..-5, a bad one -8..-18.'};
+const WIN_INTEREST = 85, LOSE_INTEREST = 8;
 
+// ── api (a rate limit or an upstream hiccup gets two more tries, so a chat never just goes quiet) ───────────────
 async function post(path, body, signal) {
-  // a rate limit or an upstream hiccup gets two more tries, so a chat never just goes quiet
   for (let attempt = 0; ; attempt++) {
     try {
       const r = await fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal});
@@ -170,25 +240,25 @@ async function post(path, body, signal) {
     await new Promise((res) => setTimeout(res, attempt ? 1800 : 700));
   }
 }
-const FALLBACKS = [FAST, 'google/gemini-2.5-flash', 'openai/gpt-4.1-nano'];
 const chat = (messages, o = {}) => post('/v1/chat/completions', {model: FAST, models: FALLBACKS, temperature: .8, max_tokens: 300, messages, ...o}).then((j) => j.choices[0].message.content.trim());
+const parse = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
 // the persona's answer: the JSON asked for, or what can be salvaged of a broken one. Raw JSON is never a message.
 function parsePersona(t) {
   const j = parse(t);
   const raw = j && (j.replies ?? j.reply);
   const list = (Array.isArray(raw) ? raw : [raw]).filter((x) => typeof x === 'string' && x.trim());
-  if (list.length) return {replies: list, interest: Number.isFinite(Number(j.interest)) ? Number(j.interest) : undefined};
+  if (list.length) return {replies: list, interest: Number.isFinite(Number(j.interest)) ? Number(j.interest) : undefined, status: typeof j.status === 'string' ? j.status.toLowerCase() : undefined};
   if (/^\s*[{[`]/.test(t) || /"replies"\s*:/.test(t)) {
     const block = (t.match(/"replies?"\s*:\s*\[?([^\]}]*)/) || [])[1] || '';
     const replies = [...block.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\"/g, '"').trim()).filter(Boolean);
     const i = (t.match(/"interest"\s*:\s*(\d+)/) || [])[1];
-    return {replies, interest: i !== undefined ? Number(i) : undefined};
+    const st = (t.match(/"status"\s*:\s*"(\w+)"/) || [])[1];
+    return {replies, interest: i !== undefined ? Number(i) : undefined, status: st && st.toLowerCase()};
   }
   return {replies: [t.trim()].filter(Boolean)};
 }
-const parse = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
 
-// the player's rating, kept the way chess keeps it: each message is a game against the other person, the label is the result
+// ── Elo: each message is a game against the other person, the label is the result ──────────────────────────────
 const ACC = Object.fromEntries(LABELS.map(([id, , , acc]) => [id, acc]));
 const expected = (r, opp) => 1 / (1 + 10 ** ((opp - r) / 400));
 function eloStep(r, opp, rating, moves) {
@@ -197,7 +267,7 @@ function eloStep(r, opp, rating, moves) {
   const delta = Math.round(k * (score - expected(r, opp)));
   return {elo: Math.max(100, r + delta), delta};
 }
-const ELO = ['A bare greeting or a dead-end reply, around 400 Elo', 'An ordinary, fine reply, around 1000 Elo', 'A sharp, warm or witty message, around 1800 Elo', 'An exceptional message that turns the whole chat, around 2600 Elo'];
+const ELO_ANCHORS = ['A bare greeting or a dead-end reply, around 400 Elo', 'An ordinary, fine reply, around 1000 Elo', 'A sharp, warm or witty message, around 1800 Elo', 'An exceptional message that turns the whole chat, around 2600 Elo'];
 async function grade(msgs, index, signal) {
   const m = msgs[index];
   const j = await post('/alpha/decisions', {
@@ -208,93 +278,140 @@ async function grade(msgs, index, signal) {
     },
     questions: {
       rating: {type: 'choice', instructions: 'How well does the graded message play in its position, the way a chess engine grades a move? Judge how it lands on the person reading it, whether it moves the conversation forward, humour, warmth, confidence, timing, and whether it answers what came before. Most messages are good or book; brilliant, checkmate and blunder are rare.', criteria: Object.fromEntries(LABELS.map(([id, , hint]) => [id, hint]))},
-      strength: {type: 'score', instructions: 'How strong is the graded message, as the chess Elo of the move?', criteria: ELO}
+      strength: {type: 'score', instructions: 'How strong is the graded message, as the chess Elo of the move?', criteria: ELO_ANCHORS}
     }
   }, signal);
   const a = j.answers;
-  return {rating: a.rating.choice, sure: Math.round((a.rating.confidence ?? 0) * 100), elo: Math.round(400 + (Number(a.strength?.score) / 3) * 2200) || 800};
+  let rating = a.rating.choice; const sure = a.rating.confidence ?? 0, probs = a.rating.probabilities || {};
+  if (sure < 0.5 && ACC[rating] !== undefined && !['checkmate', 'resign'].includes(rating)) {   // an unsure call: the label nearest the probability-weighted result, among labels that were in play
+    let tot = 0, ex = 0; for (const id in probs) if (ACC[id] !== undefined && probs[id] >= 0.08) { tot += probs[id]; ex += probs[id] * ACC[id]; }
+    if (tot) { ex /= tot; let best = rating, d = Infinity; for (const id in probs) if (probs[id] >= 0.08 && !['checkmate', 'resign'].includes(id) && Math.abs(ACC[id] - ex) < d) { d = Math.abs(ACC[id] - ex); best = id; } rating = best; }
+  }
+  return {rating, sure: Math.round((a.rating.confidence ?? 0) * 100), elo: Math.round(400 + (Number(a.strength?.score) / 3) * 2200) || 800};
 }
 
-// ── state ──────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── state, saved in this browser ───────────────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const chatEl = $('chat'), editor = $('editor');
-let persona, msgs, interest, busy, run, elo = 800, moves = 0;   // run: an AbortController per conversation, so a persona switch drops what was in flight
 const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}).toLowerCase();
+// R: what lasts across games (your rating and its history). G: the game on screen. P: preferences.
+let R = {elo: 800, moves: 0, games: 0, history: [], results: []};
+let G = null;
+let P = {theme: '', tipsSeen: false, personaId: 'sarcastic', difficulty: 'medium'};
+let busy = false, typing = false, run = new AbortController();
+const grading = new Set();
+const persona = () => PERSONAS.find((p) => p.id === G.personaId);
+const oppElo = () => persona().elo + DIFFS.find((d) => d[0] === G.difficulty)[2];
+
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify({R, P, G: G && {...G, msgs: G.msgs.map(({el, pending, ...m}) => m)}})); } catch {}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (!d) return false;
+    R = {...R, ...d.R}; P = {...P, ...d.P}; G = d.G;
+    return !!(G && PERSONAS.some((p) => p.id === G.personaId));
+  } catch { return false; }
+}
 
 function badgeEl(m) {
   const b = document.createElement('div'); b.className = 'badge';
   if (m.pending) { b.classList.add('pending'); return b; }
   if (!m.v) return null;
-  b.innerHTML = '<img alt="" src="' + iconUrl(m.v.rating, !m.out) + '">';
-  b.title = L[m.v.rating].title + ' · ~' + m.v.elo + ' Elo' + (m.delta != null ? ' · ' + (m.delta >= 0 ? '+' : '') + m.delta : '');
-  b.onclick = (e) => { e.stopPropagation(); showToast(m); };
+  const d = L[m.v.rating], cap = d.hint.charAt(0).toUpperCase() + d.hint.slice(1) + '.';
+  const delta = m.delta != null ? fmt(m.delta) : '';
+  b.style.setProperty('--c', d.color); b.tabIndex = 0; b.setAttribute('role', 'button');
+  b.setAttribute('aria-label', d.title + (delta ? ', ' + delta + ' rating' : '') + '. ' + cap);
+  b.innerHTML = '<img class="ball" alt="" src="' + iconUrl(m.v.rating, !m.out) + '"><span class="lbl">' + d.title + (delta ? '<i>' + delta + '</i>' : '') + '</span>' +
+    '<div class="why"><div class="wt">' + d.title + '</div><div class="ws">~' + m.v.elo + ' Elo' + (m.v.sure ? ' · ' + m.v.sure + '% sure' : '') + (delta ? ' · ' + delta + ' rating' : '') + '</div><div class="wd"></div></div>';
+  b.querySelector('.wd').textContent = cap;
+  // the card opens upward; a badge near the top of the chat opens it downward instead
+  const place = () => b.classList.toggle('flip', b.getBoundingClientRect().top - chatEl.getBoundingClientRect().top < 140);
+  b.addEventListener('mouseenter', place); b.addEventListener('focus', place);
+  b.addEventListener('click', (e) => { e.stopPropagation(); const open = !b.classList.contains('open'); document.querySelectorAll('.badge.open').forEach((x) => x.classList.remove('open')); if (open) { place(); b.classList.add('open'); } });
   return b;
+}
+document.addEventListener('click', () => document.querySelectorAll('.badge.open').forEach((x) => x.classList.remove('open')));
+const fmt = (n) => (n >= 0 ? '+' : '−') + Math.abs(n);
+function msgEl(m) {
+  const d = document.createElement('div'); d.className = 'msg ' + (m.out ? 'out' : 'in');
+  d.append(document.createTextNode(m.text));
+  const t = document.createElement('span'); t.className = 't';
+  if (m.out && m.delta != null) { const dl = document.createElement('span'); dl.className = 'dl ' + (m.delta >= 0 ? 'up' : 'down'); dl.textContent = fmt(m.delta); t.append(dl); }
+  t.append(document.createTextNode(m.time + (m.out ? ' ✓' : ''))); d.append(t);
+  const b = badgeEl(m); if (b) d.append(b);
+  return (m.el = d);
 }
 function draw() {
   chatEl.replaceChildren();
-  msgs.forEach((m) => {
-    const d = document.createElement('div'); d.className = 'msg ' + (m.out ? 'out' : 'in');
-    d.append(document.createTextNode(m.text));
-    const t = document.createElement('span'); t.className = 't'; t.textContent = m.time + (m.out ? ' ✓' : ''); d.append(t);
-    const b = badgeEl(m); if (b) d.append(b);
-    m.el = d; chatEl.append(d);
-  });
+  G.msgs.forEach((m) => chatEl.append(msgEl(m)));
   if (typing) { const d = document.createElement('div'); d.className = 'typing-dots'; d.innerHTML = '<i></i><i></i><i></i>'; chatEl.append(d); }
-  if (ended) {
+  if (G.ended) {
     const d = document.createElement('div'); d.className = 'banner'; d.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:.375rem;padding:.625rem 1.25rem';
-    const icon = ended === 'resign' ? 'resign' : 'checkmate';
-    d.innerHTML = '<img alt="" style="width:2.25rem;height:2.4rem" src="' + iconUrl(icon, ended === 'left-on-read') + '"><div>' +
-      (ended === 'checkmate' ? 'Checkmate. ' + persona.e + ' You won them over.' : ended === 'resign' ? 'You resigned. The chat is over.' : 'Checkmate. ' + persona.e + ' They left you on read.') + '</div>';
-    const nb = document.createElement('button'); nb.textContent = 'New game'; nb.style.cssText = 'border:0;border-radius:1rem;padding:.375rem 1rem;background:#fff;color:#333;font:inherit;font-weight:500;cursor:pointer'; nb.onclick = () => start(persona);
-    d.append(nb); chatEl.append(d);
+    d.innerHTML = '<img alt="" style="width:2.25rem;height:2.4rem" src="' + iconUrl(G.ended === 'resign' ? 'resign' : 'checkmate', G.ended === 'left-on-read') + '"><div>' +
+      (G.ended === 'checkmate' ? 'Checkmate. ' + persona().e + ' You won them over.' : G.ended === 'resign' ? 'You resigned. The chat is over.' : 'Checkmate. ' + persona().e + ' They left you on read.') + '</div><div style="font-weight:400;font-size:.8125rem;opacity:.9">Game rating ' + fmt(R.elo - G.startElo) + ' · now ♟ ' + R.elo + '</div>';
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:.5rem';
+    for (const [label, fn] of [['Game result', openGameOver], ['Coach review', openReview], ['New game', () => newGame()]]) { const nb = document.createElement('button'); nb.textContent = label; nb.style.cssText = 'border:0;border-radius:1rem;padding:.375rem 1rem;background:#fff;color:#333;font:inherit;font-weight:500;cursor:pointer'; nb.onclick = fn; row.append(nb); }
+    row.style.flexWrap = 'wrap'; row.style.justifyContent = 'center'; d.append(row); chatEl.append(d);
   }
   chatEl.scrollTop = chatEl.scrollHeight;
 }
-function patch(m) { if (!m.el) return draw(); m.el.querySelector('.badge')?.remove(); const b = badgeEl(m); if (b) m.el.append(b); }
-let typing = false, ended = '';
+function patch(m) { if (!m.el) return draw(); const nb = msgEl(m); m.el.replaceWith(nb); }
 function setMeter() {
-  $('fill').style.width = interest + '%'; $('int').textContent = '♟ ' + elo + ' Elo · ' + interest + '%';
-  $('mood').textContent = interest >= 75 ? '🔥 They are into you' : interest >= 50 ? 'Warming up' : interest >= 25 ? 'Not sold yet' : 'About to leave you on read';
+  const i = G.interest;
+  $('fill').style.width = i + '%'; $('int').textContent = i + '%';
+  $('mood').textContent = i >= 75 ? '🔥 They are into you' : i >= 50 ? 'Warming up' : i >= 25 ? 'Not sold yet' : 'About to leave you on read';
+  const p = persona();
+  $('avatar').textContent = p.e; $('name').textContent = p.name;
+  $('oppTxt').textContent = 'vs ' + p.short; $('oppElo').textContent = oppElo() + ' · ' + DIFFS.find((d) => d[0] === G.difficulty)[1];
+  $('eloNum').textContent = R.elo;
+  const d = R.elo - G.startElo; $('eloD').textContent = d ? fmt(d) : ''; $('eloD').className = 'd ' + (d >= 0 ? 'up' : 'down');
+  $('status').textContent = G.ended === 'left-on-read' ? 'last seen recently' : typing ? 'typing…' : 'online';
+  document.documentElement.dataset.theme = P.theme || '';
 }
-let toastTimer;
-function showToast(m) {
-  const t = $('toast'), d = L[m.v.rating];
-  t.innerHTML = '<div class="tl"><img alt="" src="' + iconUrl(d.id, !m.out) + '">' + d.title + ' · ~' + m.v.elo + ' Elo' + (m.v.sure ? ' · ' + m.v.sure + '% sure' : '') + (m.delta != null ? ' · ' + (m.delta >= 0 ? '+' : '') + m.delta + ' rating' : '') + '</div><div style="opacity:.8;font-size:.8125rem;margin-top:.125rem">' + d.hint.split(':')[0] + '</div>';
-  t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 4200);
+function floatDelta(delta) {
+  const f = document.createElement('span'); f.className = 'float'; f.textContent = fmt(delta); f.style.color = delta >= 0 ? '#1f9d4a' : '#c0392b';
+  $('eloChip').append(f); setTimeout(() => f.remove(), 1500);
 }
 
-function start(p) {
-  run?.abort(); run = new AbortController();
-  persona = p; interest = p.start; busy = false; typing = false; ended = ''; elo = 800; moves = 0;
-  editor.contentEditable = 'true'; editor.dataset.placeholder = 'Write a message…';
-  msgs = [{out: false, text: p.open, time: now()}];
-  $('avatar').textContent = p.e; $('name').textContent = p.name; $('status').textContent = 'online';
-  $('tips').replaceChildren(); editor.textContent = ''; $('send').disabled = true; setGhost('');
-  setMeter(); draw();
-  clearTimeout(ghostTimer); ghostTimer = setTimeout(suggest, 700);   // a first line, in grey, so the demo never opens empty
+// ── a game ─────────────────────────────────────────────────────────────────────────────────────────────────────
+function newGame(personaId = G ? G.personaId : P.personaId, difficulty = G ? G.difficulty : P.difficulty) {
+  $('over').classList.remove('on'); run.abort(); run = new AbortController(); busy = false; typing = false;
+  const p = PERSONAS.find((x) => x.id === personaId);
+  P.personaId = p.id; P.difficulty = difficulty;
+  R.games++;
+  G = {personaId: p.id, difficulty, interest: p.start, ended: '', startElo: R.elo, review: null, msgs: [{out: false, text: p.open, time: now()}]};
+  $('tips').replaceChildren(); resetComposer(); setMeter(); draw(); save(); wake();
 }
-const grading = new Set();
-function endGame(kind) {
-  if (ended) return; ended = kind; busy = false; typing = false; clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); $('tips').replaceChildren();
-  editor.contentEditable = 'false'; editor.dataset.placeholder = 'Game over'; $('send').disabled = true; $('status').textContent = kind === 'left-on-read' ? 'last seen recently' : 'online';
-  draw(); setTimeout(() => ended === kind && $('reviewBtn').onclick(), 1600);
+function resetComposer() {
+  editor.textContent = ''; setGhost(''); $('send').disabled = true;
+  editor.contentEditable = G.ended ? 'false' : 'true'; editor.dataset.placeholder = G.ended ? 'Game over' : 'Write a message…';
 }
+function wake() { clearTimeout(ghostTimer); ghostTimer = setTimeout(suggest, 700); }   // a first line, in grey, so a game never opens empty
+
 function gradeMsg(m, signal) {
   m.pending = true; patch(m);
-  const idx = msgs.indexOf(m);
-  const p = grade(msgs, idx, signal).then((v) => {
+  const p = grade(G.msgs, G.msgs.indexOf(m), signal).then((v) => {
     m.v = v;
-    if (m.out && v) {   // my message: it moves my Elo, and a Checkmate or a Resign ends the game
-      const r = eloStep(elo, persona.elo, v.rating, moves); elo = r.elo; moves++; m.delta = r.delta; setMeter();
+    if (m.out && v && m.delta == null) {   // my message: it moves my Elo, and a Checkmate or a Resign ends the game
+      const r = eloStep(R.elo, oppElo(), v.rating, R.moves); R.elo = r.elo; R.moves++; m.delta = r.delta;
+      R.history.push({elo: R.elo, g: R.games, rating: v.rating}); if (R.history.length > 300) R.history.shift();
+      floatDelta(r.delta); setMeter();
       if (v.rating === 'checkmate') setTimeout(() => endGame('checkmate'), 900); else if (v.rating === 'resign') setTimeout(() => endGame('resign'), 900);
     }
-  }).catch(() => { m.v = null; }).finally(() => { m.pending = false; patch(m); grading.delete(p); });
+  }).catch(() => { m.v = null; }).finally(() => { m.pending = false; patch(m); grading.delete(p); save(); });
   grading.add(p); return p;
+}
+function endGame(kind) {
+  if (G.ended) return; G.ended = kind; busy = false; typing = false; clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); $('tips').replaceChildren();
+  R.results.push({g: R.games, p: G.personaId, d: G.difficulty, kind, elo: R.elo, delta: R.elo - G.startElo}); if (R.results.length > 50) R.results.shift();
+  resetComposer(); setMeter(); draw(); save();
+  setTimeout(() => G.ended === kind && openGameOver(), 1100);
 }
 
 // ── composer + ghost text ──────────────────────────────────────────────────────────────────────────────────────
 let ghost = '', ghostTimer, ghostAbort, askedAt = -1;
-const text = () => editor.textContent.replace(/\u200b/g, '');
+const text = () => editor.textContent.replace(/​/g, '');
 function setGhost(v) { ghost = v; editor.dataset.ghost = v; $('field').classList.toggle('has-ghost', !!v); }
 function caretAtEnd() { const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 // a model told to continue often repeats the draft first: only the new words stay
@@ -306,17 +423,17 @@ function stripEcho(draft, t) {
   return t;
 }
 async function suggest(again = true) {
-  const draft = text(), last = msgs[msgs.length - 1];
-  if (ended || busy) return;
-  if (draft.trim() ? draft.trim().length < 3 : (last.out || askedAt === msgs.length)) return;
-  if (!draft.trim()) askedAt = msgs.length;
+  const draft = text(), last = G.msgs[G.msgs.length - 1];
+  if (G.ended || busy) return;
+  if (draft.trim() ? draft.trim().length < 3 : (last.out || askedAt === G.msgs.length)) return;
+  if (!draft.trim()) askedAt = G.msgs.length;
   ghostAbort?.abort(); const c = ghostAbort = new AbortController();
-  const hist = msgs.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
+  const hist = G.msgs.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
   try {
     const j = await post('/v1/chat/completions', {model: FAST, models: FALLBACKS, temperature: .8, max_tokens: 80, messages: [
       {role: 'system', content: 'You ghostwrite text messages for the user ("me") in a chat with another person ("them"). You write ONLY the text of the message, nothing else: no quotes, no labels, no explanation. Sound like the user: short (under 20 words), natural, confident, warm, a little humour. Answer what they said, then move the conversation forward. Never needy, creepy or try-hard.'},
       {role: 'user', content: 'Conversation:\n' + hist + '\n\n' + (draft.trim() ? 'The user has started typing: "' + draft + '"\nWrite ONLY the words that come AFTER it, appended right after the typed text. Do NOT repeat, quote or rephrase anything already typed: start with the first new word.' : 'Write the best next message from the user.')}]}, c.signal);
-    let t = j.choices[0].message.content.trim().replace(/^["“\'`]+|["”\'`]+$/g, '').replace(/\n+/g, ' ');
+    let t = j.choices[0].message.content.trim().replace(/^["“'`]+|["”'`]+$/g, '').replace(/\n+/g, ' ');
     if (draft.trim()) t = stripEcho(draft, t).replace(/^\s+(?=[.,!?;:)\]])/, '');
     if (c.signal.aborted || text() !== draft) return;
     if (!t.trim()) { if (again) return suggest(false); return; }   // the model only repeated the draft: ask once more
@@ -332,50 +449,40 @@ editor.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') setGhost('');
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
-// a touch device has no Tab: a tap on the field takes the suggestion in
-editor.addEventListener('click', () => { if (ghost && matchMedia('(pointer: coarse)').matches) accept(); });
+editor.addEventListener('click', () => { if (ghost && matchMedia('(pointer: coarse)').matches) accept(); });   // no Tab on a phone: a tap takes it
 $('send').onclick = send;
 
 async function send() {
-  const v = text().trim(); if (!v || busy || ended) return;
+  const v = text().trim(); if (!v || busy || G.ended) return;
   const signal = run.signal; busy = true;
-  editor.textContent = ''; setGhost(''); $('send').disabled = true; $('tips').replaceChildren();
-  const m = {out: true, text: v, time: now()}; msgs.push(m); typing = true; $('status').textContent = 'typing…'; draw();
+  editor.textContent = ''; setGhost(''); $('send').disabled = true; $('tips').replaceChildren(); G.review = null;
+  const m = {out: true, text: v, time: now()}; G.msgs.push(m); typing = true; setMeter(); draw(); save();
   gradeMsg(m, signal);
   try {
-    const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + persona.name + '. ' + persona.prompt + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two; each under 20 words, like a real text, never a paragraph. You track a hidden interest 0..100 (now ' + interest + '). Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10. If the user clearly wins you over (a date or number agreed, you are completely sold) set interest to 100; if they lose you for good, 0.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>}';
-    const txt = await chat([{role: 'system', content: sys}, ...msgs.map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
+    const p = persona();
+    const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + p.name + '. ' + p.prompt + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two; each under 20 words, like a real text, never a paragraph. You track a hidden interest 0..100 (now ' + G.interest + '). ' + DIFF_RULES[G.difficulty] + ' Ending the chat: set "status" to "won" as soon as the user has WON you over: you agree to meet, go on a date, give your number or a clear yes to what they proposed, or you are plainly sold (do not make them ask twice). Set "status" to "lost" when you decide you are done with this conversation (you say goodbye, block them, or tell them it is over). Otherwise "continue". When won set interest to 100, when lost 0.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>,"status":"continue|won|lost"}';
+    const txt = await chat([{role: 'system', content: sys}, ...G.msgs.map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
     if (signal.aborted) return;
-    const j = parsePersona(txt);
-    const replies = j.replies.slice(0, 2);
+    const j = parsePersona(txt); const replies = j.replies.slice(0, 2);
     if (!replies.length) throw new Error('empty answer');
     for (const r of replies) {
       await new Promise((res) => setTimeout(res, 500 + Math.min(1200, String(r).length * 22))); if (signal.aborted) return;
-      const mm = {out: false, text: String(r), time: now()}; msgs.push(mm); typing = false; draw(); gradeMsg(mm, signal); typing = replies.length > 1 && r === replies[0];
+      const mm = {out: false, text: String(r), time: now()}; G.msgs.push(mm); typing = replies.length > 1 && r === replies[0]; draw(); gradeMsg(mm, signal);
     }
     await Promise.allSettled([...grading]);
-    interest = Math.max(0, Math.min(100, Math.round(j.interest ?? interest))); setMeter();
-    if (interest >= 95 && !ended) {   // won over: the message that did it is the mating move
-      const mine = [...msgs].reverse().find((x) => x.out); if (mine) { mine.v = {rating: 'checkmate', elo: 2800, sure: 100}; patch(mine); }
+    G.interest = Math.max(0, Math.min(100, Math.round(j.interest ?? G.interest))); setMeter();
+    const won = j.status === 'won' || G.interest >= WIN_INTEREST, lost = j.status === 'lost' || G.interest <= LOSE_INTEREST;
+    if (won && !G.ended) {   // won over: the message that did it is the mating move
+      G.interest = Math.max(G.interest, 100); setMeter();
+      const mine = [...G.msgs].reverse().find((x) => x.out); if (mine) { mine.v = {rating: 'checkmate', elo: 2800, sure: 100}; if (mine.delta == null) { const r = eloStep(R.elo, oppElo(), 'checkmate', R.moves); R.elo = r.elo; R.moves++; mine.delta = r.delta; R.history.push({elo: R.elo, g: R.games, rating: 'checkmate'}); floatDelta(r.delta); } patch(mine); }
       endGame('checkmate');
-    } else if (interest <= 0 && !ended) endGame('left-on-read');
+    } else if (lost && !G.ended) { G.interest = Math.min(G.interest, LOSE_INTEREST); setMeter(); endGame('left-on-read'); }
   } catch (err) { if (!signal.aborted) { typing = false; const d = document.createElement('div'); d.className = 'banner'; d.textContent = 'They didn’t answer (' + err.message + '). Send again to retry.'; chatEl.append(d); } }
-  if (signal.aborted) return;
-  if (ended) return;
-  typing = false; busy = false; $('status').textContent = 'online'; draw();
-  clearTimeout(ghostTimer); ghostTimer = setTimeout(suggest, 700);
+  if (signal.aborted || G.ended) { save(); return; }
+  typing = false; busy = false; setMeter(); draw(); save(); wake();
 }
 
-// ── hint, review, legend, personas, theme ──────────────────────────────────────────────────────────────────────
-$('hintBtn').onclick = async () => {
-  const b = $('hintBtn'); b.disabled = true; b.style.opacity = .5;
-  try {
-    const t = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical.'}, {role: 'user', content: 'Simulated person: ' + persona.name + ' — ' + persona.tag + '.\nConversation (me = the user):\n' + msgs.map((m) => (m.out ? 'me' : 'them') + ': ' + m.text).join('\n') + '\n\nWrite 3 different messages the user could send next, in the user\'s voice: natural, confident, not cringe, each under 20 words, each a different approach. JSON only: {"options":["...","...","..."]}'}], {response_format: {type: 'json_object'}});
-    const tips = $('tips'); tips.replaceChildren();
-    (parse(t)?.options || []).slice(0, 3).forEach((o) => { const x = document.createElement('button'); x.textContent = o; x.onclick = () => { editor.textContent = o; setGhost(''); caretAtEnd(); $('send').disabled = false; tips.replaceChildren(); editor.focus(); }; tips.append(x); });
-  } catch (err) {}
-  b.disabled = false; b.style.opacity = 1;
-};
+// ── sheets ─────────────────────────────────────────────────────────────────────────────────────────────────────
 const sheet = $('sheet'), panel = $('panel');
 function openSheet(title, node) {
   panel.replaceChildren();
@@ -385,32 +492,148 @@ function openSheet(title, node) {
 function closeSheet() { sheet.classList.remove('on'); }
 sheet.onclick = (e) => { if (e.target === sheet) closeSheet(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheet.classList.contains('on')) closeSheet(); });
-$('themeBtn').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'night' ? '' : 'night'; };
-$('legendBtn').onclick = () => { const d = document.createElement('div'); d.className = 'legend'; d.innerHTML = LABELS.map(([id, t]) => '<div><img alt="" src="' + iconUrl(id) + '">' + t + '</div>').join(''); openSheet('Labels', d); };
-function pickPersona() {
-  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.5rem';
-  const intro = document.createElement('p'); intro.style.cssText = 'margin:0;color:var(--secondary);font-size:.9375rem'; intro.textContent = "Pick who you're texting. They won't make it easy: every message gets a chess rating.";
-  root.append(intro);
-  PERSONAS.forEach((p) => { const b = document.createElement('button'); b.className = 'persona' + (p === persona ? ' on' : ''); b.innerHTML = '<span class="e">' + p.e + '</span><span><b>' + p.name + '</b><small>' + p.tag + '</small></span>'; b.onclick = () => { closeSheet(); start(p); }; root.append(b); });
+const el = (html, css) => { const d = document.createElement('div'); d.innerHTML = html; if (css) d.style.cssText = css; return d; };
+
+$('themeBtn').onclick = () => { P.theme = P.theme === 'night' ? '' : 'night'; setMeter(); save(); };
+$('legendBtn').onclick = () => { const d = el(LABELS.map(([id, t, h]) => '<div><img alt="" src="' + iconUrl(id) + '"><span>' + t + '<br><small style="color:var(--secondary)">' + h.split(':')[0] + '</small></span></div>').join(''), ''); d.className = 'legend'; d.style.gridTemplateColumns = '1fr'; openSheet('The labels', d); };
+
+
+// ── the end screen, after chess.com's game-over card, in Telegram's popup style ────────────────────────────────
+function countUp(node, from, to, ms = 900) {
+  const t0 = performance.now();
+  const tick = (t) => { const k = Math.min(1, (t - t0) / ms); node.textContent = Math.round(from + (to - from) * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function openGameOver() {
+  const over = $('over'), kind = G.ended; if (!kind) return;
+  const p = persona(), mine = G.msgs.filter((m) => m.out && m.v);
+  const acc = mine.length ? Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length) : 0;
+  const gain = R.elo - G.startElo, win = kind === 'checkmate';
+  const counts = {}; mine.forEach((m) => counts[m.v.rating] = (counts[m.v.rating] || 0) + 1);
+  const title = win ? 'You won!' : kind === 'resign' ? 'You resigned' : 'You lost';
+  const sub = win ? 'Checkmate — you won them over.' : kind === 'resign' ? 'The chat ends here.' : 'Checkmate — they left you on read.';
+  over.innerHTML = '<div class="card ' + (win ? 'win' : kind === 'resign' ? 'resign' : 'lose') + '" role="dialog" aria-label="Game over">' +
+    '<div class="head"><img alt="" src="' + iconUrl(kind === 'resign' ? 'resign' : 'checkmate', kind === 'left-on-read') + '"><h3>' + title + '</h3><p>' + sub + '</p></div>' +
+    '<div class="vs"><div class="pl"><div class="av">You</div><b>You</b><small>♟ ' + R.elo + '</small></div><span class="x">vs</span><div class="pl them"><div class="av">' + p.e + '</div><b>' + p.short + '</b><small>♟ ' + oppElo() + '</small></div></div>' +
+    '<div class="rate"><span class="num" id="goNum">' + G.startElo + '</span><span class="dd ' + (gain >= 0 ? 'up' : 'down') + '">' + (gain ? fmt(gain) : '±0') + '</span><small>your rating</small></div>' +
+    '<div class="mini"><div><b>' + acc + '%</b><small>accuracy</small></div><div><b>' + mine.length + '</b><small>' + (mine.length === 1 ? 'move' : 'moves') + '</small></div><div><b>' + G.interest + '%</b><small>interest</small></div></div>' +
+    '<div class="counts" id="goCounts"></div><div class="acts"></div></div>';
+  const cc = over.querySelector('#goCounts'); cc.className = 'counts';
+  cc.innerHTML = LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join('');
+  const acts = over.querySelector('.acts');
+  for (const [label, fn, main] of [['Coach review', () => { closeOver(); openReview(); }, true], ['Rematch', () => { closeOver(); newGame(); }], ['New opponent', () => { closeOver(); pickOpponent(); }], ['Close', closeOver]]) { const b = document.createElement('button'); b.textContent = label; if (main) b.className = 'main'; b.onclick = fn; acts.append(b); }
+  over.classList.add('on');
+  countUp(over.querySelector('#goNum'), G.startElo, R.elo);
+  if (win) { const f = document.createElement('div'); f.className = 'confetti'; const cols = ['#81b64c', '#3390ec', '#f7c631', '#ff6b6b', '#1baca6', '#a88865']; for (let i = 0; i < 46; i++) { const c = document.createElement('i'); c.style.cssText = 'left:' + Math.random() * 100 + '%;background:' + cols[i % cols.length] + ';animation-duration:' + (1.8 + Math.random() * 1.8) + 's;animation-delay:' + Math.random() * .6 + 's;transform:rotate(' + Math.random() * 360 + 'deg)'; f.append(c); } over.append(f); setTimeout(() => f.remove(), 4500); }
+}
+function closeOver() { $('over').classList.remove('on'); $('over').replaceChildren(); }
+$('over').onclick = (e) => { if (e.target === $('over')) closeOver(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('over').classList.contains('on')) closeOver(); });
+
+// opponent + difficulty
+function pickOpponent() {
+  const root = el('', 'display:flex;flex-direction:column;gap:.5rem');
+  let diff = G.difficulty;
+  const seg = el('', ''); seg.className = 'seg';
+  const hint = el('', 'font-size:.8125rem;color:var(--secondary)');
+  const paint = () => { seg.replaceChildren(); DIFFS.forEach(([id, t, shift]) => { const b = document.createElement('button'); b.textContent = t + (shift ? ' (' + (shift > 0 ? '+' : '−') + Math.abs(shift) + ')' : ''); b.className = id === diff ? 'on' : ''; b.onclick = () => { diff = id; paint(); }; seg.append(b); }); hint.textContent = DIFFS.find((d) => d[0] === diff)[3] + ' Difficulty shifts how strong they are rated.'; };
+  paint();
+  root.append(el('<p style="margin:0;color:var(--secondary);font-size:.9375rem">Pick who you’re texting. Starting a new chat keeps your rating — it’s the same ♟ you carry from game to game.</p>'), seg, hint);
+  PERSONAS.forEach((p) => { const b = document.createElement('button'); b.className = 'persona' + (p.id === G.personaId ? ' on' : ''); b.innerHTML = '<span class="e">' + p.e + '</span><span style="flex:1"><b>' + p.name + '</b><small>' + p.tag + '</small></span><span style="color:var(--secondary);font-size:.8125rem">' + p.elo + '</span>'; b.onclick = () => { closeSheet(); newGame(p.id, diff); }; root.append(b); });
   openSheet('Who are you texting?', root);
 }
-$('avatar').onclick = $('who').onclick = pickPersona;
-$('reviewBtn').onclick = async () => {
+$('avatar').onclick = $('who').onclick = $('oppChip').onclick = pickOpponent;
+$('newBtn').onclick = () => newGame();
+
+// rating: where you are, how it moved
+function chartSvg(points, marks) {
+  const W = 340, H = 140, pad = 8; if (points.length < 2) return '<p class="cap" style="padding:2rem 0;text-align:center">Send a few messages: every graded message adds a point.</p>';
+  const lo = Math.min(...points, 800) - 30, hi = Math.max(...points, 900) + 30;
+  const x = (i) => pad + (W - 2 * pad) * i / (points.length - 1), y = (v) => H - pad - (H - 2 * pad) * (v - lo) / (hi - lo);
+  const path = points.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+  const area = path + ' L' + x(points.length - 1) + ' ' + (H - pad) + ' L' + x(0) + ' ' + (H - pad) + 'Z';
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><line x1="0" x2="' + W + '" y1="' + y(800) + '" y2="' + y(800) + '" stroke="currentColor" stroke-opacity=".2" stroke-dasharray="3 4"/>' +
+    (marks || []).map((i) => '<line x1="' + x(i) + '" x2="' + x(i) + '" y1="0" y2="' + H + '" stroke="currentColor" stroke-opacity=".15"/>').join('') +
+    '<path d="' + area + '" fill="#3390ec" fill-opacity=".12"/><path d="' + path + '" fill="none" stroke="#3390ec" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="' + x(points.length - 1) + '" cy="' + y(points[points.length - 1]) + '" r="4" fill="#3390ec"/></svg>';
+}
+function openRating() {
+  const h = R.history.slice(-60), pts = h.map((x) => x.elo);
+  const marks = h.map((x, i) => (i && x.g !== h[i - 1].g ? i : 0)).filter(Boolean);
+  const counts = {}; R.history.forEach((x) => counts[x.rating] = (counts[x.rating] || 0) + 1);
+  const wins = R.results.filter((r) => r.kind === 'checkmate').length;
+  const root = el('', 'display:flex;flex-direction:column;gap:.75rem');
+  root.append(el('<div class="big"><b>' + R.elo + '</b><small>your rating · started at 800 · ' + (R.elo >= 800 ? '+' : '−') + Math.abs(R.elo - 800) + ' so far</small></div>'));
+  root.append(el(chartSvg(pts, marks) + '<p class="cap">Each point is one graded message of yours; the faint lines divide games. Dotted line: 800, where you started.</p>'));
+  root.append(el('<div class="stats"><div><b>' + R.moves + '</b><small>moves</small></div><div><b>' + R.games + '</b><small>games</small></div><div><b>' + wins + '</b><small>checkmates</small></div></div>'));
+  const c = el(LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join(''), ''); c.className = 'counts'; root.append(c);
+  root.append(el('<p class="cap"><b>How it moves:</b> every message is a game against ' + persona().short + ' (rated ' + oppElo() + '). A Brilliant or Great beats the odds and adds rating; a Book or Good is par; a Mistake or Blunder costs rating. Beating a stronger opponent is worth more. Reach checkmate to win the game.</p>'));
+  openSheet('Your rating', root);
+}
+$('eloChip').onclick = openRating;
+
+// coach: line by line
+async function openReview() {
   await Promise.allSettled([...grading]);
-  const mine = msgs.filter((m) => m.out && m.v);
-  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
-  if (!mine.length) { root.textContent = 'Send a few messages first — then the coach has something to review.'; return openSheet('Review', root); }
-  const acc = Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length);
-  const counts = {}; mine.forEach((m) => counts[m.v.rating] = (counts[m.v.rating] || 0) + 1);
-  root.innerHTML = '<div class="stats"><div><b>' + elo + '</b><small>Your rating</small></div><div><b>' + acc + '%</b><small>Accuracy</small></div><div><b>' + interest + '%</b><small>Interest</small></div></div><div class="counts">' +
-    LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join('') + '</div><p class="fb" id="fb">The coach is reading your chat…</p>';
-  openSheet('Review', root);
+  const mine = G.msgs.filter((m) => m.out && m.v);
+  if (!mine.length) return openSheet('Coach review', el('Send a few messages first — then the coach goes through them one by one.'));
+  const acc = Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length), gain = R.elo - G.startElo;
+  const root = el('', 'display:flex;flex-direction:column;gap:.75rem');
+  root.append(el('<div class="stats"><div><b>' + fmt(gain) + '</b><small>rating this game</small></div><div><b>' + acc + '%</b><small>accuracy</small></div><div><b>' + G.interest + '%</b><small>interest</small></div></div>'));
+  const summary = el('', ''); summary.className = 'fb'; root.append(summary);
+  const lines = el('', 'display:flex;flex-direction:column;gap:.625rem'); root.append(lines);
+  openSheet('Coach review', root);
+  const paint = (rev) => {
+    summary.textContent = rev?.summary || 'The coach is reading your chat…';
+    lines.replaceChildren();
+    mine.forEach((m, i) => {
+      const d = L[m.v.rating], n = rev?.lines?.find((x) => x.n === i + 1);
+      const card = el('<div class="top"><img alt="" src="' + iconUrl(m.v.rating) + '"><q></q><span class="dl ' + (m.delta >= 0 ? 'up' : 'down') + '">' + (m.delta != null ? fmt(m.delta) : '') + '</span></div><div class="lab">' + d.title + ' · ' + d.hint.split(':')[0] + '</div><div class="note"></div>', ''); card.className = 'line';
+      card.querySelector('q').textContent = m.text; card.querySelector('.note').textContent = n?.note || (rev ? '' : '…');
+      if (n?.better) { const b = document.createElement('div'); b.className = 'better'; b.textContent = 'Try: ' + n.better; b.onclick = () => { closeSheet(); if (!G.ended) { editor.textContent = n.better; setGhost(''); $('send').disabled = false; caretAtEnd(); editor.focus(); } }; card.append(b); }
+      lines.append(card);
+    });
+  };
+  if (G.review && G.review.n === mine.length) return paint(G.review);
+  paint(null);
   try {
-    root.querySelector('#fb').textContent = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical; no markdown headings.'}, {role: 'user', content: 'The user practised texting ' + persona.name + '. Final interest: ' + interest + '/100.\n\n' + msgs.map((m) => (m.out ? 'me' : 'them') + ': ' + m.text + (m.v ? '  [' + L[m.v.rating].title + ']' : '')).join('\n') + '\n\nGive feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it), and one concrete thing to try next time. Then one rewrite of their worst message.'}], {max_tokens: 320});
-  } catch { root.querySelector('#fb').textContent = 'The coach could not be reached for the written review — the numbers above are still yours.'; }
+    const dump = G.msgs.map((m) => { const idx = m.out && m.v ? mine.indexOf(m) + 1 : 0; return (m.out ? 'me' : 'them') + (idx ? ' #' + idx : '') + ': ' + m.text + (m.out && m.v ? '  [' + L[m.v.rating].title + ']' : ''); }).join('\n');
+    const out = parse(await chat([{role: 'system', content: 'You are a warm, honest texting coach going through a practice chat message by message, like a chess coach going through a game. Be specific and short. Write in the language the user writes in.'}, {role: 'user', content: 'The user ("me", the numbered lines) practised texting ' + persona().name + ' (' + G.difficulty + '). Final interest ' + G.interest + '/100. The label after each of their messages is the engine\'s grade.\n\n' + dump + '\n\nFor EVERY numbered message give: "note" — one or two sentences on what worked or what hurt, referring to the label; and "better" — a stronger version of that message in the user\'s voice (omit it if the message was already Great or better). Also "summary": 2-3 sentences on the whole game and the one habit to work on.\nJSON only: {"summary":"...","lines":[{"n":1,"note":"...","better":"..."}]}'}], {max_tokens: 900, response_format: {type: 'json_object'}}));
+    if (!out?.lines) throw new Error('bad');
+    G.review = {n: mine.length, summary: out.summary, lines: out.lines}; save(); paint(G.review);
+  } catch { paint({summary: 'The coach could not be reached for the written notes — the labels and rating above are still yours.', lines: mine.map((m, i) => ({n: i + 1, note: L[m.v.rating].hint}))}); }
+}
+$('reviewBtn').onclick = openReview;
+
+$('hintBtn').onclick = async () => {
+  if (G.ended) return; const b = $('hintBtn'); b.disabled = true; b.style.opacity = .6; b.textContent = '💡 Thinking…';
+  try {
+    const t = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical.'}, {role: 'user', content: 'Simulated person: ' + persona().name + ' — ' + persona().tag + '.\nConversation (me = the user):\n' + G.msgs.map((m) => (m.out ? 'me' : 'them') + ': ' + m.text).join('\n') + '\n\nWrite 3 different messages the user could send next, in the user\'s voice: natural, confident, not cringe, each under 20 words, each a different approach. JSON only: {"options":["...","...","..."]}'}], {response_format: {type: 'json_object'}});
+    const tips = $('tips'); tips.replaceChildren();
+    (parse(t)?.options || []).slice(0, 3).forEach((o) => { const x = document.createElement('button'); x.textContent = o; x.onclick = () => { editor.textContent = o; setGhost(''); caretAtEnd(); $('send').disabled = false; tips.replaceChildren(); editor.focus(); }; tips.append(x); });
+  } catch (err) {}
+  b.disabled = false; b.style.opacity = 1; b.textContent = '💡 Hint';
 };
 
-start(PERSONAS[0]);
+// first visit: how it works
+function showTips() {
+  if (P.tipsSeen) return;
+  const d = el('<b>How this works</b><ol><li>Type — or press <b>Tab</b> to take the grey suggestion.</li><li>Every message gets a chess label and moves your <b>♟ rating</b> (top left). Tap a badge to see why.</li><li><b>📋 Coach review</b> goes through your messages line by line. <b>vs …</b> changes the opponent.</li><li>Win them over for <b>Checkmate</b>. Your game and rating are saved in this browser.</li></ol>', ''); d.className = 'tipsbox';
+  const b = document.createElement('button'); b.textContent = 'Got it'; b.onclick = () => { P.tipsSeen = true; d.remove(); save(); }; d.append(b);
+  $('chat').before(d);
+}
+
+// ── start: pick up where you left off ───────────────────────────────────────────────────────────────────────────
+if (load()) {
+  G.msgs.forEach((m) => { m.pending = false; });
+  resetComposer(); setMeter(); draw();
+  // a message whose grade did not come back before the page closed is graded again
+  G.msgs.filter((m) => !m.v && (m.out || G.msgs.indexOf(m) > 0) && !G.ended).forEach((m) => gradeMsg(m, run.signal));
+  wake();
+} else {
+  G = {personaId: P.personaId, difficulty: P.difficulty, interest: 0, ended: '', startElo: R.elo, review: null, msgs: []};
+  newGame(P.personaId, P.difficulty);
+}
+showTips();
 </script>
 </body>
 </html>

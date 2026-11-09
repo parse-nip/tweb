@@ -176,7 +176,7 @@ function SimulatorTab() {
 
     try {
       setTyping(true);
-      const {replies, interest} = await getPersonaReply(next, abort.signal);
+      const {replies, interest, status} = await getPersonaReply(next, abort.signal);
       let messages = next.messages;
       for(const reply of replies) {
         await sleep(450 + Math.min(1400, reply.length * 25));
@@ -188,7 +188,7 @@ function SimulatorTab() {
       await Promise.allSettled([...grading]);
       setSim((current) => {
         if(!current) return current;
-        const next = applyInterest(current, interest);
+        const next = applyInterest(current, interest, status);
         if(next.ending !== 'checkmate' || current.ending) return next;
         // won over by interest: the message that did it is the mating move
         const lastMine = [...next.messages].reverse().find((item) => item.from === 'me');
