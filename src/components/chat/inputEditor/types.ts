@@ -251,6 +251,8 @@ export interface ChatInputEditor {
   deleteTableRow(): boolean;
   deleteBackward(): boolean;
   destroy(): void;
+  setRizzGhost(suggestion?: string): void;
+  getRizzGhost(): string;
   focus(): void;
   focusAtEnd(focus?: boolean): void;
   getDocument(): JSONContent;

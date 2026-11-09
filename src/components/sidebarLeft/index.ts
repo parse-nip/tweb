@@ -803,6 +803,12 @@ export class AppSidebarLeft extends SidebarSlider {
       },
       verify: () => IS_CALL_SUPPORTED || IS_CONFERENCE_CALL_SUPPORTED
     }, {
+      icon: 'message_filled',
+      text: 'RizzCoach',
+      onClick: () => {
+        import('@components/rizz/rizzCoachPopup').then(({default: showRizzCoachPopup}) => showRizzCoachPopup());
+      }
+    }, {
       id: 'settings',
       icon: 'settings',
       text: 'Settings',

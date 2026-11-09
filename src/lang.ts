@@ -6931,6 +6931,7 @@ const lang = {
   'Experimental.HideNonContactLinks': 'Hide Links from Non-Contacts',
   'Experimental.HideNonContactLinks.Subtitle': 'Even where the server does not ask to',
   'Experimental.Tools': 'Developer Tools',
+  'RizzCoach': 'Rizz Coach',
   'Experimental.PopupSandbox': 'Popup Sandbox',
   'Experimental.BubbleSandbox': 'Bubble Sandbox',
   'Experimental.WidgetSandbox': 'Widget Sandbox',

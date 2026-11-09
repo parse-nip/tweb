@@ -45,6 +45,7 @@ import findUpClassName from '@helpers/dom/findUpClassName';
 import {countFirstScreen, estimateBubbleHeight, FirstScreenPlace, getAlbumBubbleMessage, getBubbleHeightAtLeast, GetWidgetHeight, joinHistories, keepFrom, keepRange, measureTextWidth, MessageTextMetrics} from '@components/chat/firstScreenHistory';
 import findUpTag from '@helpers/dom/findUpTag';
 import {hideToast, toastNew} from '@components/toast';
+import {attachRizzRating} from '@components/rizz/bubbleRating';
 import {getMiddleware, Middleware, MiddlewareHelper} from '@helpers/middleware';
 import cancelEvent from '@helpers/dom/cancelEvent';
 import {attachClickEvent, CLICK_EVENT_NAME, simulateClickEvent} from '@helpers/dom/clickEvent';
@@ -12801,6 +12802,10 @@ export default class ChatBubbles {
     }
 
     bubble.classList.add(isOut ? 'is-out' : 'is-in');
+
+    if(!previewOnly) {
+      attachRizzRating({chat: this.chat, bubble, bubbleContainer, message, our, middleware});
+    }
 
     // * reserve room for the forced guest-bot avatar in 1-on-1 chats (group chats already indent)
     if(guestChatViaFromId) {

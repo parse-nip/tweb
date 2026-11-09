@@ -470,6 +470,18 @@
     pointer-events: none;
   }
 
+  // Rizz Coach ghost text (rizzGhost.ts): the placeholder's grey, right after the caret, and the empty field's own hint steps aside for it
+  .chat-input-rizz-ghost {
+    color: var(--input-message-placeholder-color, var(--secondary-text-color));
+    pointer-events: none;
+    user-select: none;
+    white-space: pre-wrap;
+  }
+
+  .has-rizz-ghost .chat-input-context-placeholder-empty:where(:not(.chat-input-context-placeholder-centered))::after {
+    content: none;
+  }
+
   .chat-input-context-placeholder-label {
     color: var(--secondary-text-color);
     opacity: .65;

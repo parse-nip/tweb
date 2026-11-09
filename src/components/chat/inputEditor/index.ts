@@ -51,6 +51,7 @@ import {
 } from '@components/chat/inputEditor/events';
 import runHistoryCommandPreservingSelection from '@components/chat/inputEditor/history';
 import setInlineBotPlaceholder from '@components/chat/inputEditor/inlineBotPlaceholder';
+import setRizzGhost, {getRizzGhost} from '@components/chat/inputEditor/rizzGhost';
 import {
   handleEmptyParagraphBackspaceAfterRichMedia,
   handleRichMediaCaptionBackspace,
@@ -3601,6 +3602,15 @@ class TiptapChatInputEditor implements ChatInputEditor {
 
   public setInlineBotPlaceholder(placeholder?: string) {
     setInlineBotPlaceholder(this.editor, placeholder);
+  }
+
+  /** Ghost text after the caret (Rizz Coach); Tab types it in. Empty clears it. */
+  public setRizzGhost(suggestion?: string) {
+    setRizzGhost(this.editor, suggestion);
+  }
+
+  public getRizzGhost() {
+    return getRizzGhost(this.editor);
   }
 
   public setContent(content: string | Node) {

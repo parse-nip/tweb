@@ -1,3 +1,4 @@
+import attachRizzGhost from '@components/rizz/ghostText';
 import RichMessageInput, {RichMessageInputController} from '@components/richMessageInput';
 import type {RichMediaUploadServices} from '@components/richMessageInput/media';
 import createAiEditorContext from '@components/chat/inputState/createAiEditorContext';
@@ -394,7 +395,11 @@ export default class ChatInput {
       onResizeEnd: () => this.replyKeyboard?.resume(),
       onReadOnlyClick: () => toastNew({langPackKey: this.chat.isTemporaryThread ? 'WaitForTopicCreation' : POSTING_NOT_ALLOWED_MAP.send_plain}),
       onChooseMedia: (selection, action) => {void this.onAttachClick(false, true, true, selection, false, action);},
-      ref: (field) => {this.richMessageInput = field; this.messageInput = field.input;}
+      ref: (field) => {
+        this.richMessageInput = field;
+        this.messageInput = field.input;
+        attachRizzGhost({input: field.input, chat: this.chat, middleware: this.middlewareHelper.get()});
+      }
     }), this.middlewareHelper.get()));
   }
 
