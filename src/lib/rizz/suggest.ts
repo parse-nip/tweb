@@ -23,6 +23,10 @@ export function stripDraftEcho(draft: string, text: string) {
     }
   }
 
+  // the model wrote its own words first and the draft after them: what follows the draft is the continuation
+  const at = norm(text).indexOf(norm(typed));
+  if(at > 0) return text.slice(at + typed.length);
+
   return text;
 }
 

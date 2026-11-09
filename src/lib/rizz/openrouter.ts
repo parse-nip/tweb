@@ -19,6 +19,9 @@ export class RizzApiError extends Error {
   }
 }
 
+// cheap chat models to fall back to (the Worker's allow list in deploy/cloudflare/worker.js has the same ones)
+const FALLBACK_MODELS = ['google/gemini-2.5-flash', 'openai/gpt-4.1-nano'];
+
 async function post(path: string, payload: unknown, signal?: AbortSignal) {
   const {apiKey} = getRizzSettings();
   const headers: Record<string, string> = {'Content-Type': 'application/json'};
@@ -58,6 +61,8 @@ export function openRouterDecide(options: {model: string, state: unknown, questi
 export async function openRouterComplete(options: RizzCompletionOptions): Promise<string> {
   const body = await post('/v1/chat/completions', {
     model: options.model,
+    // when the model is rate limited or down OpenRouter goes on to the next
+    models: [options.model, ...FALLBACK_MODELS.filter((model) => model !== options.model)].slice(0, 3),
     messages: options.messages,
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 400,

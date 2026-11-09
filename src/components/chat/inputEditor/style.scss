@@ -473,6 +473,8 @@
   // Rizz Coach ghost text (rizzGhost.ts): the placeholder's grey, right after the caret, and the empty field's own hint steps aside for it
   .chat-input-rizz-ghost {
     color: var(--input-message-placeholder-color, var(--secondary-text-color));
+    // quieter than the placeholder: it is a suggestion, not a hint
+    opacity: .7;
     pointer-events: none;
     user-select: none;
     white-space: pre-wrap;

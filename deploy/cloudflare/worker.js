@@ -3,8 +3,8 @@
 // The client is built with VITE_OPENROUTER_BASE_URL=/api/openrouter.
 
 const ALLOWED_PATHS = new Set(['v1/chat/completions', 'alpha/decisions']);
-// the models the client uses (Jev for grading, a fast Gemini for suggestions and the simulator)
-const ALLOWED_MODELS = /^~?(typesafe\/jev|google\/gemini-2\.5-flash)/;
+// the models the client uses: Jev for grading, a fast Gemini for suggestions and the simulator, a few cheap ones to fall back to
+const ALLOWED_MODELS = /^~?(typesafe\/jev|google\/gemini-2\.5-flash(-lite)?$|openai\/gpt-4\.1-nano$|openai\/gpt-4o-mini$)/;
 const MAX_BODY = 40000;
 const MAX_TOKENS = 3000;
 
@@ -32,7 +32,9 @@ export default {
       return new Response('Bad request', {status: 400});
     }
 
-    if(!ALLOWED_MODELS.test(String(body.model || ''))) return new Response('Model not allowed', {status: 400});
+    // `models` is OpenRouter's fallback chain: every entry has to be allowed as well
+    const chain = [body.model, ...(Array.isArray(body.models) ? body.models : [])];
+    if(chain.length > 4 || !chain.every((model) => ALLOWED_MODELS.test(String(model || '')))) return new Response('Model not allowed', {status: 400});
     if(body.max_tokens > MAX_TOKENS) body.max_tokens = MAX_TOKENS;
 
     return fetch('https://openrouter.ai/api/' + path, {

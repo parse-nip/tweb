@@ -102,11 +102,23 @@ describe('rizz coach', () => {
     expect(stripDraftEcho('tea sounds good, ', 'Tea sounds good, what kind of tea?')).toBe(' what kind of tea?');
     expect(stripDraftEcho('so about this weekend', 'about this weekend I was thinking tea')).toBe(' I was thinking tea');
     expect(stripDraftEcho('hello', 'what are you up to')).toBe('what are you up to');
+    expect(stripDraftEcho('what kind of tea do you drink ', 'are you always this sarcastic? 😂 what kind of tea do you drink')).toBe('');
+    expect(stripDraftEcho('tea?', 'sure, tea? my treat')).toBe(' my treat');
 
     mockCompletion('hey bbg wanna hear my bedroom mix?');
     expect(await getRizzSuggestion({lines: [], draft: 'hey bbg'})).toBe(' wanna hear my bedroom mix?');
     mockCompletion('hey bbg');
     expect(await getRizzSuggestion({lines: [], draft: 'hey bbg'})).toBe('');
+  });
+
+  it('never shows raw JSON as a message, even from a broken answer', async() => {
+    const {parsePersonaAnswer} = await import('@lib/rizz/simulator');
+    expect(parsePersonaAnswer('{"replies":["Lol, you\'re easily impressed then. What else is new?"],"interest":40..100":40}'))
+    .toEqual({replies: ['Lol, you\'re easily impressed then. What else is new?'], interest: 40});
+    expect(parsePersonaAnswer('{"replies":["a","b"],"interest":55}')).toEqual({replies: ['a', 'b'], interest: 55});
+    expect(parsePersonaAnswer('```json\n{"replies":["x"]}\n```').replies).toEqual(['x']);
+    expect(parsePersonaAnswer('{"replies":[').replies).toEqual([]);
+    expect(parsePersonaAnswer('just text')).toEqual({replies: ['just text']});
   });
 
   it('takes the persona\'s replies and clamps its interest, and survives a model that ignores JSON', async() => {

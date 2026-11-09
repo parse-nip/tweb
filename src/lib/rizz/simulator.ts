@@ -86,6 +86,29 @@ function transcript(messages: SimMessage[]) {
   }));
 }
 
+/**
+ * What a persona model answered: the JSON asked for, or what can be salvaged of a broken one
+ * (`{"replies":["hey"],"interest":40..100":40}`). Raw JSON is never a message.
+ */
+export function parsePersonaAnswer(answer: string): {replies: string[], interest?: number} {
+  const parsed = parseModelJson<{replies?: string[] | string, reply?: string, interest?: number}>(answer);
+  const clean = (list: unknown[]) => list.filter((reply): reply is string => typeof reply === 'string' && !!reply.trim()).map((reply) => reply.trim());
+  if(parsed && typeof parsed === 'object') {
+    const raw = parsed.replies ?? parsed.reply;
+    const replies = clean(Array.isArray(raw) ? raw : [raw]);
+    if(replies.length) return {replies, interest: Number.isFinite(Number(parsed.interest)) ? Number(parsed.interest) : undefined};
+  }
+
+  if(/^\s*[{[`]/.test(answer) || /"replies"\s*:/.test(answer)) {
+    const block = answer.match(/"replies?"\s*:\s*\[?([^\]}]*)/)?.[1] ?? '';
+    const replies = clean([...block.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1].replace(/\\"/g, '"')));
+    const interest = answer.match(/"interest"\s*:\s*(\d+)/)?.[1];
+    return {replies, interest: interest !== undefined ? Number(interest) : undefined};
+  }
+
+  return {replies: clean([answer])};
+}
+
 /** The persona's answer to the conversation so far (the user's message is the last of `messages`). */
 export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
   const persona = getRizzPersona(state.personaId);
@@ -102,19 +125,9 @@ export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
     ]
   });
 
-  const parsed = parseModelJson<{replies?: string[] | string, reply?: string, interest?: number}>(answer);
-  let replies: string[] = [];
-  if(parsed) {
-    const raw = parsed.replies ?? parsed.reply;
-    replies = (Array.isArray(raw) ? raw : [raw]).filter((reply): reply is string => typeof reply === 'string' && !!reply.trim());
-  } else {
-    // a model that ignored the format: take its text as the message
-    replies = [answer.trim()].filter(Boolean);
-  }
-
-  const interest = Number.isFinite(Number(parsed?.interest)) ?
-    Math.min(100, Math.max(0, Math.round(Number(parsed.interest)))) :
-    state.interest;
+  const {replies, interest: answered} = parsePersonaAnswer(answer);
+  const interest = answered !== undefined ? Math.min(100, Math.max(0, Math.round(answered))) : state.interest;
+  if(!replies.length) throw new Error('They did not answer. Send again.');
   return {replies: replies.slice(0, 2).map((reply) => reply.trim().slice(0, 500)), interest};
 }
 

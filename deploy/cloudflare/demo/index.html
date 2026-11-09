@@ -49,7 +49,9 @@
   .field .smile { opacity: .55; margin-inline-end: .5rem; font-size: 1.25rem; }
   .editor { flex: 1; min-width: 0; outline: none; max-height: 7.5rem; overflow-y: auto; padding: .375rem 0; white-space: pre-wrap; color: var(--text); }
   .editor:empty::before { content: attr(data-placeholder); color: var(--input-placeholder); }
-  .editor:not([data-ghost=""])::after { content: attr(data-ghost); color: var(--input-placeholder); }
+  .editor:not([data-ghost=""])::after { content: attr(data-ghost); color: var(--input-placeholder); opacity: .7; }
+  .tabkey { display: none; flex: none; margin-inline-start: .5rem; padding: 0 .3125rem; border: 1px solid var(--input-placeholder); border-radius: .25rem; color: var(--input-placeholder); font-size: .6875rem; line-height: 1.3; opacity: .55; }
+  @media (pointer: fine) { .field.has-ghost .tabkey { display: block; } }
   .editor:empty[data-ghost]:not([data-ghost=""])::before { content: none; }
   .send { flex: none; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 1.25rem; cursor: pointer; box-shadow: 0 1px 2px rgba(16,35,47,.25); }
   .send:disabled { opacity: .5; cursor: default; }
@@ -108,11 +110,11 @@
   <div class="meterbar"><div class="row"><span id="mood">Interest</span><span id="int">♟ 800 Elo · 40%</span></div><div class="m"><i id="fill"></i></div></div>
   <div class="chat" id="chat"></div>
   <div class="tips" id="tips"></div>
-  <div class="hint-bar" id="hintBar"><span>Tab to accept · Esc to dismiss</span></div>
   <div class="composer">
-    <div class="field">
+    <div class="field" id="field">
       <span class="smile">☺</span>
       <div class="editor" id="editor" contenteditable="true" role="textbox" aria-label="Message" data-placeholder="Write a message…" data-ghost="" spellcheck="false"></div>
+      <span class="tabkey" aria-hidden="true">Tab</span>
     </div>
     <button class="send" id="send" aria-label="Send">➤</button>
   </div>
@@ -168,7 +170,22 @@ async function post(path, body, signal) {
     await new Promise((res) => setTimeout(res, attempt ? 1800 : 700));
   }
 }
-const chat = (messages, o = {}) => post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 300, messages, ...o}).then((j) => j.choices[0].message.content.trim());
+const FALLBACKS = [FAST, 'google/gemini-2.5-flash', 'openai/gpt-4.1-nano'];
+const chat = (messages, o = {}) => post('/v1/chat/completions', {model: FAST, models: FALLBACKS, temperature: .8, max_tokens: 300, messages, ...o}).then((j) => j.choices[0].message.content.trim());
+// the persona's answer: the JSON asked for, or what can be salvaged of a broken one. Raw JSON is never a message.
+function parsePersona(t) {
+  const j = parse(t);
+  const raw = j && (j.replies ?? j.reply);
+  const list = (Array.isArray(raw) ? raw : [raw]).filter((x) => typeof x === 'string' && x.trim());
+  if (list.length) return {replies: list, interest: Number.isFinite(Number(j.interest)) ? Number(j.interest) : undefined};
+  if (/^\s*[{[`]/.test(t) || /"replies"\s*:/.test(t)) {
+    const block = (t.match(/"replies?"\s*:\s*\[?([^\]}]*)/) || [])[1] || '';
+    const replies = [...block.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\"/g, '"').trim()).filter(Boolean);
+    const i = (t.match(/"interest"\s*:\s*(\d+)/) || [])[1];
+    return {replies, interest: i !== undefined ? Number(i) : undefined};
+  }
+  return {replies: [t.trim()].filter(Boolean)};
+}
 const parse = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
 
 // the player's rating, kept the way chess keeps it: each message is a game against the other person, the label is the result
@@ -278,16 +295,17 @@ function gradeMsg(m, signal) {
 // ── composer + ghost text ──────────────────────────────────────────────────────────────────────────────────────
 let ghost = '', ghostTimer, ghostAbort, askedAt = -1;
 const text = () => editor.textContent.replace(/\u200b/g, '');
-function setGhost(v) { ghost = v; editor.dataset.ghost = v; $('hintBar').classList.toggle('on', !!v); }
+function setGhost(v) { ghost = v; editor.dataset.ghost = v; $('field').classList.toggle('has-ghost', !!v); }
 function caretAtEnd() { const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 // a model told to continue often repeats the draft first: only the new words stay
 function stripEcho(draft, t) {
   const typed = draft.replace(/\s+$/, ''); if (!typed.trim()) return t;
   const w = typed.split(/\s+/);
   for (let i = 0; i < w.length; i++) { const tail = w.slice(i).join(' '); if (tail.length >= 2 && t.toLowerCase().startsWith(tail.toLowerCase()) && (i === 0 || tail.length >= 4)) return t.slice(tail.length); }
+  const at = t.toLowerCase().indexOf(typed.toLowerCase()); if (at > 0) return t.slice(at + typed.length);   // its own words first, the draft after
   return t;
 }
-async function suggest() {
+async function suggest(again = true) {
   const draft = text(), last = msgs[msgs.length - 1];
   if (ended || busy) return;
   if (draft.trim() ? draft.trim().length < 3 : (last.out || askedAt === msgs.length)) return;
@@ -295,17 +313,18 @@ async function suggest() {
   ghostAbort?.abort(); const c = ghostAbort = new AbortController();
   const hist = msgs.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
   try {
-    const j = await post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 80, messages: [
+    const j = await post('/v1/chat/completions', {model: FAST, models: FALLBACKS, temperature: .8, max_tokens: 80, messages: [
       {role: 'system', content: 'You ghostwrite text messages for the user ("me") in a chat with another person ("them"). You write ONLY the text of the message, nothing else: no quotes, no labels, no explanation. Sound like the user: short (under 20 words), natural, confident, warm, a little humour. Answer what they said, then move the conversation forward. Never needy, creepy or try-hard.'},
       {role: 'user', content: 'Conversation:\n' + hist + '\n\n' + (draft.trim() ? 'The user has started typing: "' + draft + '"\nWrite ONLY the words that come AFTER it, appended right after the typed text. Do NOT repeat, quote or rephrase anything already typed: start with the first new word.' : 'Write the best next message from the user.')}]}, c.signal);
     let t = j.choices[0].message.content.trim().replace(/^["“\'`]+|["”\'`]+$/g, '').replace(/\n+/g, ' ');
     if (draft.trim()) t = stripEcho(draft, t).replace(/^\s+(?=[.,!?;:)\]])/, '');
-    if (c.signal.aborted || text() !== draft || !t.trim()) return;
+    if (c.signal.aborted || text() !== draft) return;
+    if (!t.trim()) { if (again) return suggest(false); return; }   // the model only repeated the draft: ask once more
     if (draft && !/\s$/.test(draft) && !/^[\s.,!?;:)\]]/.test(t)) t = ' ' + t;
     setGhost(t);
-  } catch (e) {}
+  } catch (e) { if (!draft.trim()) askedAt = -1; }
 }
-function schedule() { clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); ghostTimer = setTimeout(suggest, 900); }
+function schedule() { clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); ghostTimer = setTimeout(suggest, 700); }
 function accept() { editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); $('send').disabled = false; }
 editor.addEventListener('input', () => { schedule(); $('send').disabled = !text().trim(); });
 editor.addEventListener('keydown', (e) => {
@@ -327,14 +346,15 @@ async function send() {
     const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + persona.name + '. ' + persona.prompt + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two; each under 20 words, like a real text, never a paragraph. You track a hidden interest 0..100 (now ' + interest + '). Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10. If the user clearly wins you over (a date or number agreed, you are completely sold) set interest to 100; if they lose you for good, 0.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>}';
     const txt = await chat([{role: 'system', content: sys}, ...msgs.map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
     if (signal.aborted) return;
-    const j = parse(txt) || {replies: [txt]};
-    const replies = (Array.isArray(j.replies) ? j.replies : [j.reply]).filter(Boolean).slice(0, 2);
+    const j = parsePersona(txt);
+    const replies = j.replies.slice(0, 2);
+    if (!replies.length) throw new Error('empty answer');
     for (const r of replies) {
       await new Promise((res) => setTimeout(res, 500 + Math.min(1200, String(r).length * 22))); if (signal.aborted) return;
       const mm = {out: false, text: String(r), time: now()}; msgs.push(mm); typing = false; draw(); gradeMsg(mm, signal); typing = replies.length > 1 && r === replies[0];
     }
     await Promise.allSettled([...grading]);
-    const next = Number(j.interest); interest = Math.max(0, Math.min(100, Math.round(Number.isFinite(next) ? next : interest))); setMeter();
+    interest = Math.max(0, Math.min(100, Math.round(j.interest ?? interest))); setMeter();
     if (interest >= 95 && !ended) {   // won over: the message that did it is the mating move
       const mine = [...msgs].reverse().find((x) => x.out); if (mine) { mine.v = {rating: 'checkmate', elo: 2800, sure: 100}; patch(mine); }
       endGame('checkmate');
