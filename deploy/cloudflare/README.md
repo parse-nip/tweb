@@ -5,7 +5,7 @@ proxies the Rizz Coach's OpenRouter calls and holds the key as the `OPENROUTER_A
 
 Workers Builds runs:
 
-- build: `pnpm install --frozen-lockfile && pnpm exec vite build && find dist -name '*.map' -delete`
+- build: `pnpm install --frozen-lockfile && pnpm exec vite build && bash deploy/cloudflare/prepare-dist.sh`
 - deploy: `npx wrangler deploy -c deploy/cloudflare/wrangler.jsonc`
 
 with the build variable `VITE_OPENROUTER_BASE_URL=/api/openrouter`. Never give the build `OPENROUTER_API_KEY`: Vite would inline it into the page.

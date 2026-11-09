@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rizz Coach — demo</title>
+<meta name="theme-color" content="#517da2">
+<style>
+  :root {
+    --bar: #517da2; --bar-text: #fff; --surface: #fff; --text: #000; --secondary: #707579; --primary: #3390ec;
+    --out: #eeffde; --out-text: #000; --in: #fff; --time-out: #5ca853; --time-in: #a0acb6; --input-placeholder: #a2acb4;
+    --bg1: #dbddbb; --bg2: #6ba587; --bg3: #d5d88d; --bg4: #88b884; --chip: rgba(0,0,0,.18);
+    --font: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  :root[data-theme="night"] {
+    --bar: #212d3b; --surface: #212121; --text: #fff; --secondary: #aaa; --primary: #8774e1;
+    --out: #766ac8; --out-text: #fff; --in: #212121; --time-out: rgba(255,255,255,.6); --time-in: rgba(255,255,255,.4);
+    --bg1: #0f0f0f; --bg2: #0f0f0f; --bg3: #0f0f0f; --bg4: #0f0f0f; --chip: rgba(0,0,0,.4); --input-placeholder: #707579;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 16px/1.3 var(--font); color: var(--text); background: #2b2b2b; display: flex; justify-content: center; }
+  .app { position: relative; width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+    background: var(--bg1); background-image: radial-gradient(at 0 0, var(--bg1), transparent 60%), radial-gradient(at 100% 0, var(--bg2), transparent 60%),
+    radial-gradient(at 100% 100%, var(--bg3), transparent 60%), radial-gradient(at 0 100%, var(--bg4), transparent 60%); }
+  .bar { flex: none; display: flex; align-items: center; gap: .75rem; padding: .5rem .75rem; background: var(--bar); color: var(--bar-text); z-index: 5;
+    box-shadow: 0 1px 2px rgba(16,35,47,.15); }
+  .avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; background: linear-gradient(#ff9a6a, #e0586b); display: flex; align-items: center; justify-content: center; font-weight: 500; color: #fff; }
+  .who { flex: 1; min-width: 0; } .who b { display: block; font-weight: 500; } .who small { opacity: .75; font-size: .8125rem; }
+  .icon-btn { border: 0; background: transparent; color: inherit; width: 2.5rem; height: 2.5rem; border-radius: 50%; cursor: pointer; font-size: 1.25rem; }
+  .icon-btn:hover { background: rgba(255,255,255,.14); }
+  .chat { flex: 1; overflow-y: auto; padding: .75rem .75rem 1rem; display: flex; flex-direction: column; gap: .125rem; }
+  .date { align-self: center; margin: .25rem 0 .75rem; padding: .125rem .625rem; border-radius: 1rem; background: var(--chip); color: #fff; font-size: .875rem; font-weight: 500; }
+  .msg { position: relative; max-width: 82%; margin-bottom: .4rem; padding: .375rem .6rem .375rem .6rem; border-radius: .75rem; line-height: 1.3; word-wrap: break-word; box-shadow: 0 1px 2px rgba(16,35,47,.15); animation: pop .18s ease-out; }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } }
+  .msg.in { align-self: flex-start; background: var(--in); border-end-start-radius: .25rem; }
+  .msg.out { align-self: flex-end; background: var(--out); color: var(--out-text); border-end-end-radius: .25rem; }
+  .msg .t { float: right; margin: .6rem 0 -.2rem .6rem; font-size: .75rem; color: var(--time-in); white-space: nowrap; }
+  .msg.out .t { color: var(--time-out); }
+  .badge { position: absolute; top: -.6rem; width: 1.5rem; height: 1.6rem; cursor: pointer; z-index: 3; transition: transform .15s; }
+  .badge:hover { transform: scale(1.15); }
+  .badge img { width: 100%; height: 100%; display: block; pointer-events: none; }
+  .msg.out .badge { inset-inline-start: -.65rem; } .msg.in .badge { inset-inline-end: -.65rem; }
+  .badge.pending { border-radius: 50%; height: 1.5rem; background: rgba(128,128,128,.6); display: flex; align-items: center; justify-content: center; }
+  .badge.pending::after { content: ''; width: .75rem; height: .75rem; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .composer { flex: none; display: flex; align-items: flex-end; gap: .5rem; padding: .5rem; z-index: 4; }
+  .field { flex: 1; min-width: 0; display: flex; align-items: center; background: var(--surface); border-radius: 1.375rem; padding: .25rem .75rem; min-height: 2.75rem; box-shadow: 0 1px 2px rgba(16,35,47,.15); }
+  .field .smile { opacity: .55; margin-inline-end: .5rem; font-size: 1.25rem; }
+  .editor { flex: 1; min-width: 0; outline: none; max-height: 7.5rem; overflow-y: auto; padding: .375rem 0; white-space: pre-wrap; color: var(--text); }
+  .editor:empty::before { content: attr(data-placeholder); color: var(--input-placeholder); }
+  .editor:not([data-ghost=""])::after { content: attr(data-ghost); color: var(--input-placeholder); }
+  .editor:empty[data-ghost]:not([data-ghost=""])::before { content: none; }
+  .send { flex: none; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 1.25rem; cursor: pointer; box-shadow: 0 1px 2px rgba(16,35,47,.25); }
+  .send:disabled { opacity: .5; cursor: default; }
+  .hint-bar { position: absolute; left: .75rem; right: .75rem; bottom: 4.25rem; z-index: 4; display: flex; justify-content: center; pointer-events: none; }
+  .hint-bar span { padding: .25rem .625rem; border-radius: 1rem; background: rgba(0,0,0,.55); color: #fff; font-size: .8125rem; opacity: 0; transition: opacity .2s; }
+  .hint-bar.on span { opacity: 1; }
+  .toast { position: absolute; left: 50%; top: 4.5rem; transform: translate(-50%, -10px); z-index: 20; max-width: 90%; padding: .5rem .875rem; border-radius: .75rem; background: rgba(0,0,0,.78); color: #fff; font-size: .9375rem; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; text-align: center; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .toast .tl { display: flex; align-items: center; gap: .5rem; justify-content: center; font-weight: 500; }
+  .toast img { width: 1.25rem; height: 1.3rem; }
+  .sheet { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,.4); display: none; align-items: flex-end; }
+  .sheet.on { display: flex; animation: fade .2s; } @keyframes fade { from { opacity: 0; } }
+  .panel { width: 100%; max-height: 92%; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border-radius: 1rem 1rem 0 0; animation: up .25s ease-out; }
+  @keyframes up { from { transform: translateY(40px); } }
+  .panel header { display: flex; align-items: center; padding: .75rem 1rem .5rem; gap: .5rem; }
+  .panel header h2 { flex: 1; margin: 0; font-size: 1.25rem; font-weight: 500; }
+  .panel header button { border: 0; background: transparent; color: var(--secondary); font-size: 1.5rem; cursor: pointer; }
+  .panel .body { overflow-y: auto; padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: .75rem; }
+  .persona { display: flex; gap: .75rem; align-items: center; padding: .5rem .75rem; border-radius: .75rem; border: 2px solid transparent; background: rgba(128,128,128,.1); cursor: pointer; font: inherit; color: inherit; text-align: start; width: 100%; }
+  .persona.on { border-color: var(--primary); } .persona .e { font-size: 1.5rem; } .persona b { display: block; font-weight: 500; } .persona small { color: var(--secondary); }
+  .btn { border: 0; border-radius: .75rem; padding: .75rem 1rem; background: var(--primary); color: #fff; font: inherit; font-weight: 500; cursor: pointer; text-transform: uppercase; letter-spacing: .03em; font-size: .875rem; }
+  .btn.sec { background: rgba(51,144,236,.12); color: var(--primary); } .btn:disabled { opacity: .5; }
+  .meter { height: .5rem; border-radius: .25rem; background: rgba(128,128,128,.25); overflow: hidden; } .meter i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg,#ca3431,#f7c631 50%,#81b64c); background-size: 20rem 100%; transition: width .4s; }
+  .meter-row { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--secondary); }
+  .sim { background: var(--bg1); background-image: radial-gradient(at 0 0, var(--bg1), transparent 60%), radial-gradient(at 100% 0, var(--bg2), transparent 60%), radial-gradient(at 100% 100%, var(--bg3), transparent 60%); border-radius: .75rem; height: 17rem; overflow-y: auto; padding: .75rem; display: flex; flex-direction: column; gap: .125rem; }
+  .sim-row { display: flex; gap: .5rem; } .sim-row input { flex: 1; min-width: 0; border: 0; border-radius: 1.375rem; padding: .625rem 1rem; background: rgba(128,128,128,.14); color: inherit; font: inherit; outline: none; }
+  .chips { display: flex; flex-direction: column; gap: .375rem; } .chips button { text-align: start; border: 0; border-radius: 1rem; padding: .5rem .875rem; background: rgba(51,144,236,.12); color: var(--primary); font: inherit; cursor: pointer; }
+  .stats { display: flex; gap: .5rem; } .stats div { flex: 1; text-align: center; padding: .5rem; border-radius: .75rem; background: rgba(128,128,128,.12); } .stats b { display: block; font-size: 1.5rem; font-weight: 500; } .stats small { color: var(--secondary); }
+  .counts { display: flex; flex-wrap: wrap; gap: .375rem; } .counts span { display: inline-flex; align-items: center; gap: .25rem; padding: .125rem .625rem .125rem .25rem; border-radius: 1rem; background: rgba(128,128,128,.14); font-size: .8125rem; } .counts img { width: 1.3rem; height: 1.4rem; }
+  .fb { margin: 0; white-space: pre-wrap; line-height: 1.4; }
+  .legend { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem .75rem; } .legend div { display: flex; align-items: center; gap: .5rem; font-size: .875rem; } .legend img { width: 1.5rem; height: 1.6rem; }
+  .err { color: #ca3431; font-size: .875rem; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="bar">
+    <div class="avatar">S</div>
+    <div class="who"><b>Sam</b><small id="status">online</small></div>
+    <button class="icon-btn" id="legendBtn" title="All labels" aria-label="All labels">♟</button>
+    <button class="icon-btn" id="coachBtn" title="Rizz Coach simulator" aria-label="Rizz Coach simulator">🎯</button>
+    <button class="icon-btn" id="themeBtn" title="Theme" aria-label="Theme">◐</button>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="hint-bar" id="hintBar"><span>Tab to accept · Esc to dismiss</span></div>
+  <div class="composer">
+    <div class="field">
+      <span class="smile">☺</span>
+      <div class="editor" id="editor" contenteditable="true" role="textbox" aria-label="Message" data-placeholder="Write a message…" data-ghost="" spellcheck="false"></div>
+    </div>
+    <button class="send" id="send" aria-label="Send">➤</button>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+</div>
+
+<script>
+'use strict';
+const API = '/api/openrouter';
+const JEV = 'typesafe/jev-1.13';
+const FAST = 'google/gemini-2.5-flash-lite';
+
+// ── labels (the badges are the supplied drawings in icons/) ─────────────────────────────────────────────────────
+const LABELS = [
+  ['brilliant', 'Brilliant', 'rare, genuinely clever or emotionally perfect: witty, disarming, escalates the vibe without trying too hard', 100],
+  ['great', 'Great', 'a strong message that moves the conversation forward, shows personality, or turns the chat around', 92],
+  ['best', 'Best', 'the best reply available in this position', 88],
+  ['excellent', 'Excellent', 'a very good message, close to the best one', 80],
+  ['good', 'Good', 'fine and natural, but nothing special', 65],
+  ['book', 'Book', 'a standard, expected message (greetings, small talk, logistics)', 60],
+  ['forced', 'Forced', 'the only sensible thing to say (a direct question that must be answered, a thank-you, an apology owed)', 70],
+  ['inaccuracy', 'Inaccuracy', 'a bit off: dry, a little needy, or a missed chance', 40],
+  ['mistake', 'Mistake', 'a message that hurts the vibe: awkward, boring, try-hard, or pushy', 25],
+  ['miss', 'Miss', 'ignored an obvious opening or question, or dodged what they were offering', 20],
+  ['blunder', 'Blunder', 'a conversation-killer: rude, creepy, desperate, passive-aggressive or offensive', 0],
+  ['checkmate', 'Checkmate', "ends the conversation in the user's favour: a date agreed, a number given, a perfect last word. Very rare", 100],
+  ['resign', 'Resign', 'gives up: a surrender, an apology spiral, "forget it", "never mind"', 0]
+];
+const L = Object.fromEntries(LABELS.map(([id, title, hint, acc]) => [id, {id, title, hint, acc}]));
+const iconUrl = (id, dark) => 'icons/' + ((dark && (id === 'checkmate' || id === 'resign')) ? id + '-black' : id) + '.svg';
+
+// ── api ────────────────────────────────────────────────────────────────────────────────────────────────────────
+async function post(path, body, signal) {
+  const r = await fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal});
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.error?.message || ('HTTP ' + r.status));
+  return j;
+}
+const chat = (messages, o = {}) => post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 300, messages, ...o}).then((j) => j.choices[0].message.content.trim());
+const json = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
+
+const ELO = ['A bare greeting or a dead-end reply, around 400 Elo', 'An ordinary, fine reply, around 1000 Elo', 'A sharp, warm or witty message, around 1800 Elo', 'An exceptional message that turns the whole chat, around 2600 Elo'];
+async function grade(lines, index) {
+  const line = lines[index];
+  const j = await post('/alpha/decisions', {
+    model: JEV,
+    state: {
+      conversation_before: lines.slice(Math.max(0, index - 14), index).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n') || '(this is the first message)',
+      graded_message_sender: line.out ? 'me' : 'them', graded_message: line.text
+    },
+    questions: {
+      rating: {type: 'choice', instructions: 'How well does the graded message play in its position, the way a chess engine grades a move? Judge how it lands on the person reading it, whether it moves the conversation forward, humour, warmth, confidence, timing, and whether it answers what came before. Most messages are good or book; brilliant, checkmate and blunder are rare.', criteria: Object.fromEntries(LABELS.map(([id, , hint]) => [id, hint]))},
+      strength: {type: 'score', instructions: 'How strong is the graded message, as the chess Elo of the move?', criteria: ELO}
+    }
+  });
+  const a = j.answers;
+  return {rating: a.rating.choice, sure: Math.round((a.rating.confidence ?? 0) * 100), elo: Math.round(400 + (Number(a.strength?.score) / 3) * 2200) || 800};
+}
+
+// ── the chat ───────────────────────────────────────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const chatEl = $('chat'), editor = $('editor');
+const lines = [
+  {out: true, text: 'You gave me mystery-novel energy today.', time: '9:56 am', v: {rating: 'brilliant', elo: 2450, sure: 84}},
+  {out: false, text: "That is the best compliment I've heard all week.", time: '10:00 am', v: {rating: 'good', elo: 1050, sure: 71}},
+  {out: true, text: 'Then chapter two should be tea this weekend.', time: '10:04 am', v: {rating: 'great', elo: 1980, sure: 78}},
+  {out: false, text: 'Ok that was actually good.', time: '10:08 am', v: {rating: 'excellent', elo: 1500, sure: 66}},
+  {out: true, text: 'im good at a lot, dont take it personally', time: '11:26 am', v: {rating: 'mistake', elo: 620, sure: 80}},
+  {out: true, text: 'leave me on read? well 🖕 u then', time: '11:27 am', v: {rating: 'blunder', elo: 180, sure: 93}}
+];
+let live = false;
+
+function badge(l) {
+  const b = document.createElement('div');
+  b.className = 'badge';
+  if (!l.v) { b.classList.add('pending'); return b; }
+  b.innerHTML = '<img alt="" src="' + iconUrl(l.v.rating, !l.out) + '">';
+  b.title = L[l.v.rating].title + ' · ~' + l.v.elo + ' Elo';
+  b.onclick = (e) => { e.stopPropagation(); toast(l); };
+  return b;
+}
+function render() {
+  chatEl.replaceChildren();
+  const d = document.createElement('div'); d.className = 'date'; d.textContent = 'April 9'; chatEl.append(d);
+  lines.forEach((l, i) => {
+    const m = document.createElement('div');
+    m.className = 'msg ' + (l.out ? 'out' : 'in');
+    m.append(document.createTextNode(l.text));
+    const t = document.createElement('span'); t.className = 't'; t.textContent = l.time + (l.out ? ' ✓' : ''); m.append(t, badge(l));
+    l.el = m; chatEl.append(m);
+  });
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+let toastTimer;
+function toast(l) {
+  const t = $('toast'), d = L[l.v.rating];
+  t.innerHTML = '<div class="tl"><img alt="" src="' + iconUrl(d.id, !l.out) + '">' + d.title + ' · ~' + l.v.elo + ' Elo' + (l.v.sure ? ' · ' + l.v.sure + '% sure' : '') + '</div><div style="opacity:.8;font-size:.8125rem;margin-top:.125rem">' + d.hint.split(':')[0] + '</div>';
+  t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 4200);
+}
+function setBadge(l) { l.el.querySelector('.badge')?.remove(); l.el.append(badge(l)); }
+
+async function gradeAll(only) {
+  const targets = only ?? lines.map((_, i) => i);
+  targets.forEach((i) => { lines[i].v = null; setBadge(lines[i]); });
+  for (const i of targets) {
+    try { lines[i].v = await grade(lines, i); live = true; }
+    catch (e) { lines[i].v = lines[i].v || {rating: 'good', elo: 1000, sure: 0}; lines[i].failed = true; }
+    setBadge(lines[i]);
+  }
+}
+
+// ── send + ghost text ──────────────────────────────────────────────────────────────────────────────────────────
+const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}).toLowerCase();
+let ghost = '', ghostTimer, ghostAbort, askedFor = null;
+const text = () => editor.textContent.replace(/​/g, '');
+function setGhost(s) { ghost = s; editor.dataset.ghost = s; $('hintBar').classList.toggle('on', !!s); }
+function caretAtEnd() {
+  const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+async function suggest() {
+  const draft = text(); const last = lines[lines.length - 1];
+  if (draft.trim() ? draft.trim().length < 3 : (last.out || askedFor === lines.length)) return;
+  if (!draft.trim()) askedFor = lines.length;
+  ghostAbort?.abort(); const c = ghostAbort = new AbortController();
+  const hist = lines.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
+  try {
+    const j = await post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 80, messages: [
+      {role: 'system', content: 'You ghostwrite text messages for the user ("me") in a chat with another person ("them"). You write ONLY the text of the message, nothing else: no quotes, no labels, no explanation. Sound like the user: short (under 20 words), natural, confident, warm, a little humour. Answer what they said, then move the conversation forward. Never needy, creepy or try-hard.'},
+      {role: 'user', content: 'Conversation:\n' + hist + '\n\n' + (draft.trim() ? 'The user has started typing: "' + draft + '"\nWrite ONLY the words that continue it, appended right after the typed text.' : 'Write the best next message from the user.')}]}, c.signal);
+    let t = j.choices[0].message.content.trim().replace(/^["“'`]+|["”'`]+$/g, '').replace(/\n+/g, ' ');
+    if (c.signal.aborted || text() !== draft || !t) return;
+    if (draft && !/\s$/.test(draft) && !/^[\s.,!?;:)\]]/.test(t)) t = ' ' + t;
+    setGhost(t);
+  } catch (e) { if (!c.signal.aborted && draft.trim()) setGhost(FALLBACK(draft)); }
+}
+const FALLBACK = (d) => (/tea|coffee|drink/i.test(d) ? ' — and you\'re buying the first round' : ' and you owe me a story for that');
+function schedule() { clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); ghostTimer = setTimeout(suggest, 900); }
+editor.addEventListener('input', () => { schedule(); $('send').disabled = !text().trim(); });
+editor.addEventListener('focus', schedule);
+editor.addEventListener('keydown', (e) => {
+  if (ghost && (e.key === 'Tab' || (e.key === 'ArrowRight' && !e.shiftKey)) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault(); editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); $('send').disabled = false; return;
+  }
+  if (e.key === 'Escape') setGhost('');
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+// a touch device has no Tab: tapping the field's end takes the suggestion in
+editor.addEventListener('click', (e) => { if (ghost && matchMedia('(pointer: coarse)').matches) { editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); } });
+$('send').disabled = true;
+$('send').onclick = send;
+async function send() {
+  const v = text().trim(); if (!v) return;
+  editor.textContent = ''; setGhost(''); $('send').disabled = true;
+  const l = {out: true, text: v, time: now(), v: null}; lines.push(l); render();
+  try { l.v = await grade(lines, lines.length - 1); } catch { l.v = {rating: 'good', elo: 1000, sure: 0}; }
+  setBadge(l); chatEl.scrollTop = chatEl.scrollHeight;
+  // "Sam" answers, so the chat goes on
+  $('status').textContent = 'typing…';
+  try {
+    const r = await chat([{role: 'system', content: 'You are Sam, texting with someone you like a little. Reply in one short, natural text message (under 15 words). Playful, a bit teasing, human. If they were rude, be cold.'},
+      ...lines.slice(-10).map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {max_tokens: 60});
+    lines.push({out: false, text: r.replace(/^["“]|["”]$/g, ''), time: now(), v: null}); render();
+    const i = lines.length - 1; try { lines[i].v = await grade(lines, i); } catch { lines[i].v = {rating: 'book', elo: 900, sure: 0}; } setBadge(lines[i]);
+  } catch {} finally { $('status').textContent = 'online'; chatEl.scrollTop = chatEl.scrollHeight; }
+}
+
+// ── theme, legend ──────────────────────────────────────────────────────────────────────────────────────────────
+$('themeBtn').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'night' ? '' : 'night'; };
+const sheet = $('sheet'), panel = $('panel');
+function open(title, node) {
+  panel.replaceChildren();
+  const h = document.createElement('header'); h.innerHTML = '<h2></h2><button aria-label="Close">×</button>'; h.querySelector('h2').textContent = title; h.querySelector('button').onclick = close;
+  const b = document.createElement('div'); b.className = 'body'; b.append(node); panel.append(h, b); sheet.classList.add('on');
+}
+function close() { sheet.classList.remove('on'); sim?.abort?.abort(); }
+sheet.onclick = (e) => { if (e.target === sheet) close(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheet.classList.contains('on')) close(); });
+$('legendBtn').onclick = () => {
+  const d = document.createElement('div'); d.className = 'legend';
+  d.innerHTML = LABELS.map(([id, title]) => '<div><img alt="" src="' + iconUrl(id) + '">' + title + '</div>').join('');
+  open('Labels', d);
+};
+
+// ── simulator ──────────────────────────────────────────────────────────────────────────────────────────────────
+const PERSONAS = [
+  ['sarcastic', '🙄', 'The Sarcastic Comedian', 'Roasts everything, respects a quick comeback', 40, 'You are sarcastic, quick and teasing. You roast the user lightly and respect witty comebacks and confidence. You are bored by try-hard compliments and needy messages. Never cruel, always playful.'],
+  ['shy', '📚', 'The Shy Bookworm', 'Short answers, warms up to genuine curiosity', 45, 'You are shy and a bit awkward, a bookworm. You answer briefly at first, use "haha" and "um", and open up when the user asks specific, genuine questions. Generic pickup lines or pressure make you retreat.'],
+  ['hardtoget', '🧊', 'The Hard-to-Get', 'Slow, low effort, you must earn it', 25, 'You are hard to get: few words, rarely ask questions back, mildly unimpressed. Your interest only climbs when the user is confident, funny, specific and not desperate. Double-texting and neediness drop it fast.'],
+  ['flirt', '😏', 'The Confident Flirt', 'Flirts back hard, tests your frame', 60, 'You are a confident flirt used to attention. You tease, flirt back and test whether the user can hold their frame. Boring or safe messages bore you; bold, playful ones thrill you.'],
+  ['dry', '🪨', 'The Dry Texter', '"lol", "k", "yeah" — you do the heavy lifting', 35, 'You are a dry texter: lowercase, one-to-four word replies, "lol", "yeah", "ok" — not actually uninterested, just no effort. A truly funny message or a question worth answering makes you write a full sentence.'],
+  ['ex', '💔', 'The Ex Who Left You on Read', 'Recover it with zero desperation', 20, "You are the user's ex. You left them on read last week. Guarded, a little curious, a little proud. Apologising too much, guilt-tripping or anger make you leave; calm, funny, self-aware messages thaw you."]
+];
+let sim;
+$('coachBtn').onclick = () => {
+  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
+  let pick = 0;
+  const intro = document.createElement('p'); intro.style.cssText = 'margin:0;color:var(--secondary);font-size:.9375rem'; intro.textContent = "Pick who you're texting. They won't make it easy: every message you send gets a chess rating.";
+  const list = document.createElement('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:.375rem';
+  PERSONAS.forEach((p, i) => { const b = document.createElement('button'); b.className = 'persona' + (i === 0 ? ' on' : ''); b.innerHTML = '<span class="e">' + p[1] + '</span><span><b>' + p[2] + '</b><small>' + p[3] + '</small></span>'; b.onclick = () => { pick = i; [...list.children].forEach((c, j) => c.classList.toggle('on', j === i)); }; list.append(b); });
+  const go = document.createElement('button'); go.className = 'btn'; go.textContent = 'Start texting'; go.onclick = () => startSim(PERSONAS[pick]);
+  root.append(intro, list, go); open('Rizz Coach', root);
+};
+function startSim(p) {
+  const S = {p, msgs: [], interest: p[4], abort: new AbortController(), busy: false, n: 0}; sim = S;
+  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
+  root.innerHTML = '<div><div class="meter-row"><span>' + p[1] + ' ' + p[2] + '</span><span id="int">Interest ' + p[4] + '%</span></div><div class="meter"><i id="fill" style="width:' + p[4] + '%"></i></div></div>' +
+    '<div class="sim" id="simChat"></div><div class="err" id="simErr"></div><div class="chips" id="chips"></div>' +
+    '<form class="sim-row" id="simForm"><input id="simIn" autocomplete="off" maxlength="300" placeholder="Write a message…"><button class="btn" style="border-radius:50%;width:2.75rem;height:2.75rem;padding:0">➤</button></form>' +
+    '<div style="display:flex;gap:.5rem"><button class="btn sec" id="hint" style="flex:1">💡 Hint</button><button class="btn sec" id="review" style="flex:1">End &amp; review</button></div><div id="report"></div>';
+  open('Rizz Coach', root);
+  const el = (id) => root.querySelector('#' + id), box = el('simChat');
+  const draw = () => {
+    box.replaceChildren();
+    S.msgs.forEach((m) => { const d = document.createElement('div'); d.className = 'msg ' + (m.me ? 'out' : 'in'); d.textContent = m.t; if (m.me) { const b = document.createElement('div'); b.className = 'badge' + (m.v ? '' : ' pending'); if (m.v) b.innerHTML = '<img alt="" src="' + iconUrl(m.v.rating) + '">'; d.append(b); } m.el = d; box.append(d); });
+    if (S.typing) { const d = document.createElement('div'); d.className = 'msg in'; d.style.opacity = '.7'; d.textContent = 'typing…'; box.append(d); }
+    box.scrollTop = box.scrollHeight;
+  };
+  const meter = () => { el('fill').style.width = S.interest + '%'; el('int').textContent = 'Interest ' + S.interest + '%'; };
+  const asLines = () => S.msgs.map((m) => ({out: m.me, text: m.t}));
+  el('simForm').onsubmit = async (e) => {
+    e.preventDefault(); const inp = el('simIn'); const t = inp.value.trim(); if (!t || S.busy) return;
+    inp.value = ''; el('chips').replaceChildren(); el('simErr').textContent = ''; S.busy = true;
+    const m = {me: true, t, v: null}; S.msgs.push(m); S.n++; S.typing = true; draw();
+    grade(asLines(), S.msgs.length - 1).then((v) => { m.v = v; draw(); }).catch(() => { m.v = {rating: 'good', elo: 1000, sure: 0}; draw(); });
+    try {
+      const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + p[2] + '. ' + p[5] + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two. You track a hidden interest 0..100 (now ' + S.interest + '). Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>}';
+      const txt = await chat([{role: 'system', content: sys}, ...S.msgs.map((x) => ({role: x.me ? 'user' : 'assistant', content: x.t}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
+      const j = json(txt) || {replies: [txt]};
+      const replies = (Array.isArray(j.replies) ? j.replies : [j.reply]).filter(Boolean).slice(0, 2);
+      for (const r of replies) { await new Promise((res) => setTimeout(res, 500 + Math.min(1200, r.length * 22))); if (S.abort.signal.aborted) return; S.msgs.push({me: false, t: String(r)}); draw(); }
+      S.interest = Math.max(0, Math.min(100, Math.round(Number(j.interest) || S.interest))); meter();
+      if (S.interest >= 100 || S.interest <= 0) { el('simErr').style.color = 'inherit'; el('simErr').textContent = S.interest >= 100 ? p[1] + " They're in. You got the date." : p[1] + ' Left on read. They lost interest.'; }
+    } catch (err) { el('simErr').textContent = err.message; }
+    S.typing = false; S.busy = false; draw();
+  };
+  el('hint').onclick = async () => {
+    const b = el('hint'); b.disabled = true; b.textContent = 'Thinking…';
+    try {
+      const t = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical.'}, {role: 'user', content: 'Simulated person: ' + p[2] + ' — ' + p[3] + '.\nConversation (me = the user):\n' + (S.msgs.map((m) => (m.me ? 'me' : 'them') + ': ' + m.t).join('\n') || '(nothing yet — the user must open)') + '\n\nWrite 3 different messages the user could send next, in the user\'s voice: natural, confident, not cringe, each under 20 words, each a different approach. JSON only: {"options":["...","...","..."]}'}], {response_format: {type: 'json_object'}});
+      const ch = el('chips'); ch.replaceChildren();
+      (json(t)?.options || []).slice(0, 3).forEach((o) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = o; x.onclick = () => { el('simIn').value = o; el('simIn').focus(); ch.replaceChildren(); }; ch.append(x); });
+    } catch (err) { el('simErr').textContent = err.message; }
+    b.disabled = false; b.textContent = '💡 Hint';
+  };
+  el('review').onclick = async () => {
+    const mine = S.msgs.filter((m) => m.me && m.v); if (!mine.length) return;
+    const b = el('review'); b.disabled = true; b.textContent = 'Reviewing…';
+    const acc = Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length), elo = Math.round(mine.reduce((a, m) => a + m.v.elo, 0) / mine.length);
+    const counts = {}; mine.forEach((m) => counts[m.v.rating] = (counts[m.v.rating] || 0) + 1);
+    const rep = el('report');
+    rep.innerHTML = '<div class="stats"><div><b>' + elo + '</b><small>Your Elo</small></div><div><b>' + acc + '%</b><small>Accuracy</small></div><div><b>' + S.interest + '%</b><small>Interest</small></div></div><div class="counts" style="margin:.75rem 0">' +
+      LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join('') + '</div><p class="fb" id="fb">…</p>';
+    try {
+      const fb = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical; no markdown headings.'}, {role: 'user', content: 'The user practised texting ' + p[2] + '. Final interest: ' + S.interest + '/100.\n\n' + S.msgs.map((m) => (m.me ? 'me' : 'them') + ': ' + m.t + (m.v ? '  [' + L[m.v.rating].title + ']' : '')).join('\n') + '\n\nGive feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it), and one concrete thing to try next time. Then one rewrite of their worst message.'}], {max_tokens: 320});
+      rep.querySelector('#fb').textContent = fb;
+    } catch { rep.querySelector('#fb').textContent = 'The coach could not be reached for the written review — the numbers above are still yours.'; }
+    b.disabled = false; b.textContent = 'End & review'; rep.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  };
+  draw();
+}
+
+render();
+// the conversation above carries sample labels; the first tap on "Grade live" or any send asks Jev for real ones
+setTimeout(() => gradeAll(), 600);
+</script>
+</body>
+</html>

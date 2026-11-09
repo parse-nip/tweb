@@ -332,7 +332,7 @@ function SimulatorTab() {
                   <div class={styles.counts}>
                     <For each={RIZZ_RATINGS.filter((def) => result().counts[def.id])}>{(def) => (
                       <span class={styles.count}>
-                        <span class={styles.countDot} style={{'--rizz-color': def.color}}>{createRatingGlyph(def)}</span>
+                        <span class={styles.countDot}>{createRatingGlyph(def)}</span>
                         {def.title} × {result().counts[def.id]}
                       </span>
                     )}</For>

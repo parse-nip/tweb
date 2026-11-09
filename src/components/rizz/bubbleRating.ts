@@ -86,7 +86,7 @@ export function attachRizzRating({chat, bubble, bubbleContainer, message, our, m
 
     const def = getRizzRatingDef(verdict.rating);
     badge.style.setProperty('--rizz-color', def.color);
-    badge.replaceChildren(createRatingGlyph(def));
+    badge.replaceChildren(createRatingGlyph(def, !our));
     badge.title = describe(verdict);
     badge.setAttribute('aria-label', describe(verdict));
   };
