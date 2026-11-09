@@ -23,11 +23,11 @@
   .app { position: relative; width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; overflow: hidden;
     background: var(--bg1); background-image: radial-gradient(at 0 0, var(--bg1), transparent 60%), radial-gradient(at 100% 0, var(--bg2), transparent 60%),
     radial-gradient(at 100% 100%, var(--bg3), transparent 60%), radial-gradient(at 0 100%, var(--bg4), transparent 60%); }
-  .bar { flex: none; display: flex; align-items: center; gap: .75rem; padding: .5rem .75rem; background: var(--bar); color: var(--bar-text); z-index: 5;
+  .bar { flex: none; display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; background: var(--bar); color: var(--bar-text); z-index: 5;
     box-shadow: 0 1px 2px rgba(16,35,47,.15); }
   .avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; background: linear-gradient(#ff9a6a, #e0586b); display: flex; align-items: center; justify-content: center; font-weight: 500; color: #fff; }
-  .who { flex: 1; min-width: 0; } .who b { display: block; font-weight: 500; } .who small { opacity: .75; font-size: .8125rem; }
-  .icon-btn { border: 0; background: transparent; color: inherit; width: 2.5rem; height: 2.5rem; border-radius: 50%; cursor: pointer; font-size: 1.25rem; }
+  .who { flex: 1; min-width: 0; } .who b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .who small { opacity: .75; font-size: .8125rem; }
+  .icon-btn { flex: none; border: 0; background: transparent; color: inherit; width: 2.25rem; height: 2.25rem; border-radius: 50%; cursor: pointer; font-size: 1.25rem; }
   .icon-btn:hover { background: rgba(255,255,255,.14); }
   .chat { flex: 1; overflow-y: auto; padding: .75rem .75rem 1rem; display: flex; flex-direction: column; gap: .125rem; }
   .date { align-self: center; margin: .25rem 0 .75rem; padding: .125rem .625rem; border-radius: 1rem; background: var(--chip); color: #fff; font-size: .875rem; font-weight: 500; }
@@ -82,18 +82,32 @@
   .fb { margin: 0; white-space: pre-wrap; line-height: 1.4; }
   .legend { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem .75rem; } .legend div { display: flex; align-items: center; gap: .5rem; font-size: .875rem; } .legend img { width: 1.5rem; height: 1.6rem; }
   .err { color: #ca3431; font-size: .875rem; }
+  .meterbar { flex: none; padding: .375rem .75rem .5rem; background: var(--bar); color: var(--bar-text); display: flex; flex-direction: column; gap: .25rem; z-index: 5; }
+  .meterbar .row { display: flex; justify-content: space-between; font-size: .75rem; opacity: .85; }
+  .meterbar .m { height: .3125rem; border-radius: .25rem; background: rgba(255,255,255,.25); overflow: hidden; }
+  .meterbar .m i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg,#ff6b6b,#ffd166 50%,#7bd88f); background-size: 20rem 100%; transition: width .4s; }
+  .tips { flex: none; display: flex; gap: .375rem; padding: 0 .5rem .375rem; overflow-x: auto; z-index: 4; }
+  .tips:empty { display: none; }
+  .tips button { flex: none; max-width: 85%; border: 0; border-radius: 1rem; padding: .4375rem .875rem; background: var(--surface); color: var(--primary); font: inherit; font-size: .9375rem; cursor: pointer; box-shadow: 0 1px 2px rgba(16,35,47,.15); text-align: start; }
+  .typing-dots { align-self: flex-start; padding: .5rem .75rem; border-radius: .75rem; background: var(--in); box-shadow: 0 1px 2px rgba(16,35,47,.15); display: flex; gap: .25rem; }
+  .typing-dots i { width: .4375rem; height: .4375rem; border-radius: 50%; background: var(--secondary); opacity: .5; animation: bounce 1s infinite; } .typing-dots i:nth-child(2) { animation-delay: .15s; } .typing-dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 40% { transform: translateY(-3px); opacity: 1; } }
+  .banner { align-self: center; margin: .5rem 0; padding: .375rem .875rem; border-radius: 1rem; background: var(--chip); color: #fff; font-size: .875rem; font-weight: 500; text-align: center; }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <div class="bar">
-    <div class="avatar">S</div>
-    <div class="who"><b>Sam</b><small id="status">online</small></div>
+    <button class="avatar" id="avatar" style="border:0;font-size:1.5rem;cursor:pointer" title="Change who you're texting" aria-label="Change who you're texting">🙄</button>
+    <div class="who" id="who" style="cursor:pointer"><b id="name">The Sarcastic Comedian</b><small id="status">online</small></div>
+    <button class="icon-btn" id="hintBtn" title="Hint" aria-label="Hint">💡</button>
+    <button class="icon-btn" id="reviewBtn" title="End &amp; review" aria-label="End and review">📊</button>
     <button class="icon-btn" id="legendBtn" title="All labels" aria-label="All labels">♟</button>
-    <button class="icon-btn" id="coachBtn" title="Rizz Coach simulator" aria-label="Rizz Coach simulator">🎯</button>
     <button class="icon-btn" id="themeBtn" title="Theme" aria-label="Theme">◐</button>
   </div>
+  <div class="meterbar"><div class="row"><span id="mood">Interest</span><span id="int">♟ 800 Elo · 40%</span></div><div class="m"><i id="fill"></i></div></div>
   <div class="chat" id="chat"></div>
+  <div class="tips" id="tips"></div>
   <div class="hint-bar" id="hintBar"><span>Tab to accept · Esc to dismiss</span></div>
   <div class="composer">
     <div class="field">
@@ -103,7 +117,6 @@
     <button class="send" id="send" aria-label="Send">➤</button>
   </div>
   <div class="toast" id="toast"></div>
-
   <div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
 </div>
 
@@ -113,7 +126,6 @@ const API = '/api/openrouter';
 const JEV = 'typesafe/jev-1.13';
 const FAST = 'google/gemini-2.5-flash-lite';
 
-// ── labels (the badges are the supplied drawings in icons/) ─────────────────────────────────────────────────────
 const LABELS = [
   ['brilliant', 'Brilliant', 'rare, genuinely clever or emotionally perfect: witty, disarming, escalates the vibe without trying too hard', 100],
   ['great', 'Great', 'a strong message that moves the conversation forward, shows personality, or turns the chat around', 92],
@@ -132,240 +144,253 @@ const LABELS = [
 const L = Object.fromEntries(LABELS.map(([id, title, hint, acc]) => [id, {id, title, hint, acc}]));
 const iconUrl = (id, dark) => 'icons/' + ((dark && (id === 'checkmate' || id === 'resign')) ? id + '-black' : id) + '.svg';
 
-// ── api ────────────────────────────────────────────────────────────────────────────────────────────────────────
+const PERSONAS = [
+  {id: 'sarcastic', elo: 1300, e: '🙄', name: 'The Sarcastic Comedian', tag: 'Roasts everything, respects a quick comeback', start: 40, open: 'oh look, a stranger with a phone. impressive.', prompt: 'You are sarcastic, quick and teasing. You roast the user lightly and respect witty comebacks and confidence. You are bored by try-hard compliments and needy messages. Never cruel, always playful.'},
+  {id: 'shy', elo: 700, e: '📚', name: 'The Shy Bookworm', tag: 'Short answers, warms up to genuine curiosity', start: 45, open: 'um, hi. sorry, i was reading. hello', prompt: 'You are shy and a bit awkward, a bookworm. You answer briefly at first, use "haha" and "um", and open up when the user asks specific, genuine questions. Generic pickup lines or pressure make you retreat.'},
+  {id: 'hardtoget', elo: 1500, e: '🧊', name: 'The Hard-to-Get', tag: 'Slow, low effort, you must earn it', start: 25, open: 'hey', prompt: 'You are hard to get: few words, rarely ask questions back, mildly unimpressed. Your interest only climbs when the user is confident, funny, specific and not desperate. Double-texting and neediness drop it fast.'},
+  {id: 'flirt', elo: 1600, e: '😏', name: 'The Confident Flirt', tag: 'Flirts back hard, tests your frame', start: 60, open: "well well. you finally texted. i was starting to think you'd lost my number", prompt: 'You are a confident flirt used to attention. You tease, flirt back and test whether the user can hold their frame. Boring or safe messages bore you; bold, playful ones thrill you.'},
+  {id: 'dry', elo: 1000, e: '🪨', name: 'The Dry Texter', tag: '"lol", "k", "yeah" — you do the heavy lifting', start: 35, open: 'yo', prompt: 'You are a dry texter: lowercase, one-to-four word replies, "lol", "yeah", "ok" — not actually uninterested, just no effort. A truly funny message or a question worth answering makes you write a full sentence.'},
+  {id: 'ex', elo: 1400, e: '💔', name: 'The Ex Who Left You on Read', tag: 'Recover it with zero desperation', start: 20, open: 'oh. hi. i saw your messages. i was busy', prompt: "You are the user's ex. You left them on read last week. Guarded, a little curious, a little proud. Apologising too much, guilt-tripping or anger make you leave; calm, funny, self-aware messages thaw you."}
+];
+
 async function post(path, body, signal) {
-  const r = await fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal});
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.error?.message || ('HTTP ' + r.status));
-  return j;
+  // a rate limit or an upstream hiccup gets two more tries, so a chat never just goes quiet
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const r = await fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal});
+      const j = await r.json().catch(() => null);
+      if (r.ok) return j;
+      const err = new Error(j?.error?.message || ('HTTP ' + r.status)); err.status = r.status;
+      if ((r.status !== 429 && r.status < 500) || attempt >= 2) throw err;
+    } catch (err) {
+      if (signal?.aborted || (err.status && err.status < 500 && err.status !== 429) || attempt >= 2) throw err;
+    }
+    await new Promise((res) => setTimeout(res, attempt ? 1800 : 700));
+  }
 }
 const chat = (messages, o = {}) => post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 300, messages, ...o}).then((j) => j.choices[0].message.content.trim());
-const json = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
+const parse = (t) => { const s = t.replace(/```(?:json)?/g, ''); const a = s.search(/[{[]/); const b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']')); try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; } };
 
+// the player's rating, kept the way chess keeps it: each message is a game against the other person, the label is the result
+const ACC = Object.fromEntries(LABELS.map(([id, , , acc]) => [id, acc]));
+const expected = (r, opp) => 1 / (1 + 10 ** ((opp - r) / 400));
+function eloStep(r, opp, rating, moves) {
+  const k = moves < 10 ? 48 : 32;
+  const score = Math.min(1, Math.max(0, (ACC[rating] / 100 - 0.6) / 0.4 * 0.5 + 0.5));
+  const delta = Math.round(k * (score - expected(r, opp)));
+  return {elo: Math.max(100, r + delta), delta};
+}
 const ELO = ['A bare greeting or a dead-end reply, around 400 Elo', 'An ordinary, fine reply, around 1000 Elo', 'A sharp, warm or witty message, around 1800 Elo', 'An exceptional message that turns the whole chat, around 2600 Elo'];
-async function grade(lines, index) {
-  const line = lines[index];
+async function grade(msgs, index, signal) {
+  const m = msgs[index];
   const j = await post('/alpha/decisions', {
     model: JEV,
     state: {
-      conversation_before: lines.slice(Math.max(0, index - 14), index).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n') || '(this is the first message)',
-      graded_message_sender: line.out ? 'me' : 'them', graded_message: line.text
+      conversation_before: msgs.slice(Math.max(0, index - 14), index).map((x) => (x.out ? 'me' : 'them') + ': ' + x.text).join('\n') || '(this is the first message)',
+      graded_message_sender: m.out ? 'me' : 'them', graded_message: m.text
     },
     questions: {
       rating: {type: 'choice', instructions: 'How well does the graded message play in its position, the way a chess engine grades a move? Judge how it lands on the person reading it, whether it moves the conversation forward, humour, warmth, confidence, timing, and whether it answers what came before. Most messages are good or book; brilliant, checkmate and blunder are rare.', criteria: Object.fromEntries(LABELS.map(([id, , hint]) => [id, hint]))},
       strength: {type: 'score', instructions: 'How strong is the graded message, as the chess Elo of the move?', criteria: ELO}
     }
-  });
+  }, signal);
   const a = j.answers;
   return {rating: a.rating.choice, sure: Math.round((a.rating.confidence ?? 0) * 100), elo: Math.round(400 + (Number(a.strength?.score) / 3) * 2200) || 800};
 }
 
-// ── the chat ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── state ──────────────────────────────────────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const chatEl = $('chat'), editor = $('editor');
-const lines = [
-  {out: true, text: 'You gave me mystery-novel energy today.', time: '9:56 am', v: {rating: 'brilliant', elo: 2450, sure: 84}},
-  {out: false, text: "That is the best compliment I've heard all week.", time: '10:00 am', v: {rating: 'good', elo: 1050, sure: 71}},
-  {out: true, text: 'Then chapter two should be tea this weekend.', time: '10:04 am', v: {rating: 'great', elo: 1980, sure: 78}},
-  {out: false, text: 'Ok that was actually good.', time: '10:08 am', v: {rating: 'excellent', elo: 1500, sure: 66}},
-  {out: true, text: 'im good at a lot, dont take it personally', time: '11:26 am', v: {rating: 'mistake', elo: 620, sure: 80}},
-  {out: true, text: 'leave me on read? well 🖕 u then', time: '11:27 am', v: {rating: 'blunder', elo: 180, sure: 93}}
-];
-let live = false;
+let persona, msgs, interest, busy, run, elo = 800, moves = 0;   // run: an AbortController per conversation, so a persona switch drops what was in flight
+const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}).toLowerCase();
 
-function badge(l) {
-  const b = document.createElement('div');
-  b.className = 'badge';
-  if (!l.v) { b.classList.add('pending'); return b; }
-  b.innerHTML = '<img alt="" src="' + iconUrl(l.v.rating, !l.out) + '">';
-  b.title = L[l.v.rating].title + ' · ~' + l.v.elo + ' Elo';
-  b.onclick = (e) => { e.stopPropagation(); toast(l); };
+function badgeEl(m) {
+  const b = document.createElement('div'); b.className = 'badge';
+  if (m.pending) { b.classList.add('pending'); return b; }
+  if (!m.v) return null;
+  b.innerHTML = '<img alt="" src="' + iconUrl(m.v.rating, !m.out) + '">';
+  b.title = L[m.v.rating].title + ' · ~' + m.v.elo + ' Elo' + (m.delta != null ? ' · ' + (m.delta >= 0 ? '+' : '') + m.delta : '');
+  b.onclick = (e) => { e.stopPropagation(); showToast(m); };
   return b;
 }
-function render() {
+function draw() {
   chatEl.replaceChildren();
-  const d = document.createElement('div'); d.className = 'date'; d.textContent = 'April 9'; chatEl.append(d);
-  lines.forEach((l, i) => {
-    const m = document.createElement('div');
-    m.className = 'msg ' + (l.out ? 'out' : 'in');
-    m.append(document.createTextNode(l.text));
-    const t = document.createElement('span'); t.className = 't'; t.textContent = l.time + (l.out ? ' ✓' : ''); m.append(t, badge(l));
-    l.el = m; chatEl.append(m);
+  msgs.forEach((m) => {
+    const d = document.createElement('div'); d.className = 'msg ' + (m.out ? 'out' : 'in');
+    d.append(document.createTextNode(m.text));
+    const t = document.createElement('span'); t.className = 't'; t.textContent = m.time + (m.out ? ' ✓' : ''); d.append(t);
+    const b = badgeEl(m); if (b) d.append(b);
+    m.el = d; chatEl.append(d);
   });
+  if (typing) { const d = document.createElement('div'); d.className = 'typing-dots'; d.innerHTML = '<i></i><i></i><i></i>'; chatEl.append(d); }
+  if (ended) {
+    const d = document.createElement('div'); d.className = 'banner'; d.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:.375rem;padding:.625rem 1.25rem';
+    const icon = ended === 'resign' ? 'resign' : 'checkmate';
+    d.innerHTML = '<img alt="" style="width:2.25rem;height:2.4rem" src="' + iconUrl(icon, ended === 'left-on-read') + '"><div>' +
+      (ended === 'checkmate' ? 'Checkmate. ' + persona.e + ' You won them over.' : ended === 'resign' ? 'You resigned. The chat is over.' : 'Checkmate. ' + persona.e + ' They left you on read.') + '</div>';
+    const nb = document.createElement('button'); nb.textContent = 'New game'; nb.style.cssText = 'border:0;border-radius:1rem;padding:.375rem 1rem;background:#fff;color:#333;font:inherit;font-weight:500;cursor:pointer'; nb.onclick = () => start(persona);
+    d.append(nb); chatEl.append(d);
+  }
   chatEl.scrollTop = chatEl.scrollHeight;
 }
+function patch(m) { if (!m.el) return draw(); m.el.querySelector('.badge')?.remove(); const b = badgeEl(m); if (b) m.el.append(b); }
+let typing = false, ended = '';
+function setMeter() {
+  $('fill').style.width = interest + '%'; $('int').textContent = '♟ ' + elo + ' Elo · ' + interest + '%';
+  $('mood').textContent = interest >= 75 ? '🔥 They are into you' : interest >= 50 ? 'Warming up' : interest >= 25 ? 'Not sold yet' : 'About to leave you on read';
+}
 let toastTimer;
-function toast(l) {
-  const t = $('toast'), d = L[l.v.rating];
-  t.innerHTML = '<div class="tl"><img alt="" src="' + iconUrl(d.id, !l.out) + '">' + d.title + ' · ~' + l.v.elo + ' Elo' + (l.v.sure ? ' · ' + l.v.sure + '% sure' : '') + '</div><div style="opacity:.8;font-size:.8125rem;margin-top:.125rem">' + d.hint.split(':')[0] + '</div>';
+function showToast(m) {
+  const t = $('toast'), d = L[m.v.rating];
+  t.innerHTML = '<div class="tl"><img alt="" src="' + iconUrl(d.id, !m.out) + '">' + d.title + ' · ~' + m.v.elo + ' Elo' + (m.v.sure ? ' · ' + m.v.sure + '% sure' : '') + (m.delta != null ? ' · ' + (m.delta >= 0 ? '+' : '') + m.delta + ' rating' : '') + '</div><div style="opacity:.8;font-size:.8125rem;margin-top:.125rem">' + d.hint.split(':')[0] + '</div>';
   t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 4200);
 }
-function setBadge(l) { l.el.querySelector('.badge')?.remove(); l.el.append(badge(l)); }
 
-async function gradeAll(only) {
-  const targets = only ?? lines.map((_, i) => i);
-  targets.forEach((i) => { lines[i].v = null; setBadge(lines[i]); });
-  for (const i of targets) {
-    try { lines[i].v = await grade(lines, i); live = true; }
-    catch (e) { lines[i].v = lines[i].v || {rating: 'good', elo: 1000, sure: 0}; lines[i].failed = true; }
-    setBadge(lines[i]);
-  }
+function start(p) {
+  run?.abort(); run = new AbortController();
+  persona = p; interest = p.start; busy = false; typing = false; ended = ''; elo = 800; moves = 0;
+  editor.contentEditable = 'true'; editor.dataset.placeholder = 'Write a message…';
+  msgs = [{out: false, text: p.open, time: now()}];
+  $('avatar').textContent = p.e; $('name').textContent = p.name; $('status').textContent = 'online';
+  $('tips').replaceChildren(); editor.textContent = ''; $('send').disabled = true; setGhost('');
+  setMeter(); draw();
+  clearTimeout(ghostTimer); ghostTimer = setTimeout(suggest, 700);   // a first line, in grey, so the demo never opens empty
+}
+const grading = new Set();
+function endGame(kind) {
+  if (ended) return; ended = kind; busy = false; typing = false; clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); $('tips').replaceChildren();
+  editor.contentEditable = 'false'; editor.dataset.placeholder = 'Game over'; $('send').disabled = true; $('status').textContent = kind === 'left-on-read' ? 'last seen recently' : 'online';
+  draw(); setTimeout(() => ended === kind && $('reviewBtn').onclick(), 1600);
+}
+function gradeMsg(m, signal) {
+  m.pending = true; patch(m);
+  const idx = msgs.indexOf(m);
+  const p = grade(msgs, idx, signal).then((v) => {
+    m.v = v;
+    if (m.out && v) {   // my message: it moves my Elo, and a Checkmate or a Resign ends the game
+      const r = eloStep(elo, persona.elo, v.rating, moves); elo = r.elo; moves++; m.delta = r.delta; setMeter();
+      if (v.rating === 'checkmate') setTimeout(() => endGame('checkmate'), 900); else if (v.rating === 'resign') setTimeout(() => endGame('resign'), 900);
+    }
+  }).catch(() => { m.v = null; }).finally(() => { m.pending = false; patch(m); grading.delete(p); });
+  grading.add(p); return p;
 }
 
-// ── send + ghost text ──────────────────────────────────────────────────────────────────────────────────────────
-const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}).toLowerCase();
-let ghost = '', ghostTimer, ghostAbort, askedFor = null;
-const text = () => editor.textContent.replace(/​/g, '');
-function setGhost(s) { ghost = s; editor.dataset.ghost = s; $('hintBar').classList.toggle('on', !!s); }
-function caretAtEnd() {
-  const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false);
-  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+// ── composer + ghost text ──────────────────────────────────────────────────────────────────────────────────────
+let ghost = '', ghostTimer, ghostAbort, askedAt = -1;
+const text = () => editor.textContent.replace(/\u200b/g, '');
+function setGhost(v) { ghost = v; editor.dataset.ghost = v; $('hintBar').classList.toggle('on', !!v); }
+function caretAtEnd() { const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+// a model told to continue often repeats the draft first: only the new words stay
+function stripEcho(draft, t) {
+  const typed = draft.replace(/\s+$/, ''); if (!typed.trim()) return t;
+  const w = typed.split(/\s+/);
+  for (let i = 0; i < w.length; i++) { const tail = w.slice(i).join(' '); if (tail.length >= 2 && t.toLowerCase().startsWith(tail.toLowerCase()) && (i === 0 || tail.length >= 4)) return t.slice(tail.length); }
+  return t;
 }
 async function suggest() {
-  const draft = text(); const last = lines[lines.length - 1];
-  if (draft.trim() ? draft.trim().length < 3 : (last.out || askedFor === lines.length)) return;
-  if (!draft.trim()) askedFor = lines.length;
+  const draft = text(), last = msgs[msgs.length - 1];
+  if (ended || busy) return;
+  if (draft.trim() ? draft.trim().length < 3 : (last.out || askedAt === msgs.length)) return;
+  if (!draft.trim()) askedAt = msgs.length;
   ghostAbort?.abort(); const c = ghostAbort = new AbortController();
-  const hist = lines.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
+  const hist = msgs.slice(-12).map((l) => (l.out ? 'me' : 'them') + ': ' + l.text).join('\n');
   try {
     const j = await post('/v1/chat/completions', {model: FAST, temperature: .8, max_tokens: 80, messages: [
       {role: 'system', content: 'You ghostwrite text messages for the user ("me") in a chat with another person ("them"). You write ONLY the text of the message, nothing else: no quotes, no labels, no explanation. Sound like the user: short (under 20 words), natural, confident, warm, a little humour. Answer what they said, then move the conversation forward. Never needy, creepy or try-hard.'},
-      {role: 'user', content: 'Conversation:\n' + hist + '\n\n' + (draft.trim() ? 'The user has started typing: "' + draft + '"\nWrite ONLY the words that continue it, appended right after the typed text.' : 'Write the best next message from the user.')}]}, c.signal);
-    let t = j.choices[0].message.content.trim().replace(/^["“'`]+|["”'`]+$/g, '').replace(/\n+/g, ' ');
-    if (c.signal.aborted || text() !== draft || !t) return;
+      {role: 'user', content: 'Conversation:\n' + hist + '\n\n' + (draft.trim() ? 'The user has started typing: "' + draft + '"\nWrite ONLY the words that come AFTER it, appended right after the typed text. Do NOT repeat, quote or rephrase anything already typed: start with the first new word.' : 'Write the best next message from the user.')}]}, c.signal);
+    let t = j.choices[0].message.content.trim().replace(/^["“\'`]+|["”\'`]+$/g, '').replace(/\n+/g, ' ');
+    if (draft.trim()) t = stripEcho(draft, t).replace(/^\s+(?=[.,!?;:)\]])/, '');
+    if (c.signal.aborted || text() !== draft || !t.trim()) return;
     if (draft && !/\s$/.test(draft) && !/^[\s.,!?;:)\]]/.test(t)) t = ' ' + t;
     setGhost(t);
-  } catch (e) { if (!c.signal.aborted && draft.trim()) setGhost(FALLBACK(draft)); }
+  } catch (e) {}
 }
-const FALLBACK = (d) => (/tea|coffee|drink/i.test(d) ? ' — and you\'re buying the first round' : ' and you owe me a story for that');
 function schedule() { clearTimeout(ghostTimer); ghostAbort?.abort(); setGhost(''); ghostTimer = setTimeout(suggest, 900); }
+function accept() { editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); $('send').disabled = false; }
 editor.addEventListener('input', () => { schedule(); $('send').disabled = !text().trim(); });
-editor.addEventListener('focus', schedule);
 editor.addEventListener('keydown', (e) => {
-  if (ghost && (e.key === 'Tab' || (e.key === 'ArrowRight' && !e.shiftKey)) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    e.preventDefault(); editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); $('send').disabled = false; return;
-  }
+  if (ghost && (e.key === 'Tab' || (e.key === 'ArrowRight' && !e.shiftKey)) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); accept(); return; }
   if (e.key === 'Escape') setGhost('');
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
-// a touch device has no Tab: tapping the field's end takes the suggestion in
-editor.addEventListener('click', (e) => { if (ghost && matchMedia('(pointer: coarse)').matches) { editor.textContent = text() + ghost; setGhost(''); caretAtEnd(); } });
-$('send').disabled = true;
+// a touch device has no Tab: a tap on the field takes the suggestion in
+editor.addEventListener('click', () => { if (ghost && matchMedia('(pointer: coarse)').matches) accept(); });
 $('send').onclick = send;
+
 async function send() {
-  const v = text().trim(); if (!v) return;
-  editor.textContent = ''; setGhost(''); $('send').disabled = true;
-  const l = {out: true, text: v, time: now(), v: null}; lines.push(l); render();
-  try { l.v = await grade(lines, lines.length - 1); } catch { l.v = {rating: 'good', elo: 1000, sure: 0}; }
-  setBadge(l); chatEl.scrollTop = chatEl.scrollHeight;
-  // "Sam" answers, so the chat goes on
-  $('status').textContent = 'typing…';
+  const v = text().trim(); if (!v || busy || ended) return;
+  const signal = run.signal; busy = true;
+  editor.textContent = ''; setGhost(''); $('send').disabled = true; $('tips').replaceChildren();
+  const m = {out: true, text: v, time: now()}; msgs.push(m); typing = true; $('status').textContent = 'typing…'; draw();
+  gradeMsg(m, signal);
   try {
-    const r = await chat([{role: 'system', content: 'You are Sam, texting with someone you like a little. Reply in one short, natural text message (under 15 words). Playful, a bit teasing, human. If they were rude, be cold.'},
-      ...lines.slice(-10).map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {max_tokens: 60});
-    lines.push({out: false, text: r.replace(/^["“]|["”]$/g, ''), time: now(), v: null}); render();
-    const i = lines.length - 1; try { lines[i].v = await grade(lines, i); } catch { lines[i].v = {rating: 'book', elo: 900, sure: 0}; } setBadge(lines[i]);
-  } catch {} finally { $('status').textContent = 'online'; chatEl.scrollTop = chatEl.scrollHeight; }
+    const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + persona.name + '. ' + persona.prompt + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two; each under 20 words, like a real text, never a paragraph. You track a hidden interest 0..100 (now ' + interest + '). Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10. If the user clearly wins you over (a date or number agreed, you are completely sold) set interest to 100; if they lose you for good, 0.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>}';
+    const txt = await chat([{role: 'system', content: sys}, ...msgs.map((x) => ({role: x.out ? 'user' : 'assistant', content: x.text}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
+    if (signal.aborted) return;
+    const j = parse(txt) || {replies: [txt]};
+    const replies = (Array.isArray(j.replies) ? j.replies : [j.reply]).filter(Boolean).slice(0, 2);
+    for (const r of replies) {
+      await new Promise((res) => setTimeout(res, 500 + Math.min(1200, String(r).length * 22))); if (signal.aborted) return;
+      const mm = {out: false, text: String(r), time: now()}; msgs.push(mm); typing = false; draw(); gradeMsg(mm, signal); typing = replies.length > 1 && r === replies[0];
+    }
+    await Promise.allSettled([...grading]);
+    const next = Number(j.interest); interest = Math.max(0, Math.min(100, Math.round(Number.isFinite(next) ? next : interest))); setMeter();
+    if (interest >= 95 && !ended) {   // won over: the message that did it is the mating move
+      const mine = [...msgs].reverse().find((x) => x.out); if (mine) { mine.v = {rating: 'checkmate', elo: 2800, sure: 100}; patch(mine); }
+      endGame('checkmate');
+    } else if (interest <= 0 && !ended) endGame('left-on-read');
+  } catch (err) { if (!signal.aborted) { typing = false; const d = document.createElement('div'); d.className = 'banner'; d.textContent = 'They didn’t answer (' + err.message + '). Send again to retry.'; chatEl.append(d); } }
+  if (signal.aborted) return;
+  if (ended) return;
+  typing = false; busy = false; $('status').textContent = 'online'; draw();
+  clearTimeout(ghostTimer); ghostTimer = setTimeout(suggest, 700);
 }
 
-// ── theme, legend ──────────────────────────────────────────────────────────────────────────────────────────────
-$('themeBtn').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'night' ? '' : 'night'; };
+// ── hint, review, legend, personas, theme ──────────────────────────────────────────────────────────────────────
+$('hintBtn').onclick = async () => {
+  const b = $('hintBtn'); b.disabled = true; b.style.opacity = .5;
+  try {
+    const t = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical.'}, {role: 'user', content: 'Simulated person: ' + persona.name + ' — ' + persona.tag + '.\nConversation (me = the user):\n' + msgs.map((m) => (m.out ? 'me' : 'them') + ': ' + m.text).join('\n') + '\n\nWrite 3 different messages the user could send next, in the user\'s voice: natural, confident, not cringe, each under 20 words, each a different approach. JSON only: {"options":["...","...","..."]}'}], {response_format: {type: 'json_object'}});
+    const tips = $('tips'); tips.replaceChildren();
+    (parse(t)?.options || []).slice(0, 3).forEach((o) => { const x = document.createElement('button'); x.textContent = o; x.onclick = () => { editor.textContent = o; setGhost(''); caretAtEnd(); $('send').disabled = false; tips.replaceChildren(); editor.focus(); }; tips.append(x); });
+  } catch (err) {}
+  b.disabled = false; b.style.opacity = 1;
+};
 const sheet = $('sheet'), panel = $('panel');
-function open(title, node) {
+function openSheet(title, node) {
   panel.replaceChildren();
-  const h = document.createElement('header'); h.innerHTML = '<h2></h2><button aria-label="Close">×</button>'; h.querySelector('h2').textContent = title; h.querySelector('button').onclick = close;
+  const h = document.createElement('header'); h.innerHTML = '<h2></h2><button aria-label="Close">×</button>'; h.querySelector('h2').textContent = title; h.querySelector('button').onclick = closeSheet;
   const b = document.createElement('div'); b.className = 'body'; b.append(node); panel.append(h, b); sheet.classList.add('on');
 }
-function close() { sheet.classList.remove('on'); sim?.abort?.abort(); }
-sheet.onclick = (e) => { if (e.target === sheet) close(); };
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheet.classList.contains('on')) close(); });
-$('legendBtn').onclick = () => {
-  const d = document.createElement('div'); d.className = 'legend';
-  d.innerHTML = LABELS.map(([id, title]) => '<div><img alt="" src="' + iconUrl(id) + '">' + title + '</div>').join('');
-  open('Labels', d);
-};
-
-// ── simulator ──────────────────────────────────────────────────────────────────────────────────────────────────
-const PERSONAS = [
-  ['sarcastic', '🙄', 'The Sarcastic Comedian', 'Roasts everything, respects a quick comeback', 40, 'You are sarcastic, quick and teasing. You roast the user lightly and respect witty comebacks and confidence. You are bored by try-hard compliments and needy messages. Never cruel, always playful.'],
-  ['shy', '📚', 'The Shy Bookworm', 'Short answers, warms up to genuine curiosity', 45, 'You are shy and a bit awkward, a bookworm. You answer briefly at first, use "haha" and "um", and open up when the user asks specific, genuine questions. Generic pickup lines or pressure make you retreat.'],
-  ['hardtoget', '🧊', 'The Hard-to-Get', 'Slow, low effort, you must earn it', 25, 'You are hard to get: few words, rarely ask questions back, mildly unimpressed. Your interest only climbs when the user is confident, funny, specific and not desperate. Double-texting and neediness drop it fast.'],
-  ['flirt', '😏', 'The Confident Flirt', 'Flirts back hard, tests your frame', 60, 'You are a confident flirt used to attention. You tease, flirt back and test whether the user can hold their frame. Boring or safe messages bore you; bold, playful ones thrill you.'],
-  ['dry', '🪨', 'The Dry Texter', '"lol", "k", "yeah" — you do the heavy lifting', 35, 'You are a dry texter: lowercase, one-to-four word replies, "lol", "yeah", "ok" — not actually uninterested, just no effort. A truly funny message or a question worth answering makes you write a full sentence.'],
-  ['ex', '💔', 'The Ex Who Left You on Read', 'Recover it with zero desperation', 20, "You are the user's ex. You left them on read last week. Guarded, a little curious, a little proud. Apologising too much, guilt-tripping or anger make you leave; calm, funny, self-aware messages thaw you."]
-];
-let sim;
-$('coachBtn').onclick = () => {
-  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
-  let pick = 0;
-  const intro = document.createElement('p'); intro.style.cssText = 'margin:0;color:var(--secondary);font-size:.9375rem'; intro.textContent = "Pick who you're texting. They won't make it easy: every message you send gets a chess rating.";
-  const list = document.createElement('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:.375rem';
-  PERSONAS.forEach((p, i) => { const b = document.createElement('button'); b.className = 'persona' + (i === 0 ? ' on' : ''); b.innerHTML = '<span class="e">' + p[1] + '</span><span><b>' + p[2] + '</b><small>' + p[3] + '</small></span>'; b.onclick = () => { pick = i; [...list.children].forEach((c, j) => c.classList.toggle('on', j === i)); }; list.append(b); });
-  const go = document.createElement('button'); go.className = 'btn'; go.textContent = 'Start texting'; go.onclick = () => startSim(PERSONAS[pick]);
-  root.append(intro, list, go); open('Rizz Coach', root);
-};
-function startSim(p) {
-  const S = {p, msgs: [], interest: p[4], abort: new AbortController(), busy: false, n: 0}; sim = S;
-  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
-  root.innerHTML = '<div><div class="meter-row"><span>' + p[1] + ' ' + p[2] + '</span><span id="int">Interest ' + p[4] + '%</span></div><div class="meter"><i id="fill" style="width:' + p[4] + '%"></i></div></div>' +
-    '<div class="sim" id="simChat"></div><div class="err" id="simErr"></div><div class="chips" id="chips"></div>' +
-    '<form class="sim-row" id="simForm"><input id="simIn" autocomplete="off" maxlength="300" placeholder="Write a message…"><button class="btn" style="border-radius:50%;width:2.75rem;height:2.75rem;padding:0">➤</button></form>' +
-    '<div style="display:flex;gap:.5rem"><button class="btn sec" id="hint" style="flex:1">💡 Hint</button><button class="btn sec" id="review" style="flex:1">End &amp; review</button></div><div id="report"></div>';
-  open('Rizz Coach', root);
-  const el = (id) => root.querySelector('#' + id), box = el('simChat');
-  const draw = () => {
-    box.replaceChildren();
-    S.msgs.forEach((m) => { const d = document.createElement('div'); d.className = 'msg ' + (m.me ? 'out' : 'in'); d.textContent = m.t; if (m.me) { const b = document.createElement('div'); b.className = 'badge' + (m.v ? '' : ' pending'); if (m.v) b.innerHTML = '<img alt="" src="' + iconUrl(m.v.rating) + '">'; d.append(b); } m.el = d; box.append(d); });
-    if (S.typing) { const d = document.createElement('div'); d.className = 'msg in'; d.style.opacity = '.7'; d.textContent = 'typing…'; box.append(d); }
-    box.scrollTop = box.scrollHeight;
-  };
-  const meter = () => { el('fill').style.width = S.interest + '%'; el('int').textContent = 'Interest ' + S.interest + '%'; };
-  const asLines = () => S.msgs.map((m) => ({out: m.me, text: m.t}));
-  el('simForm').onsubmit = async (e) => {
-    e.preventDefault(); const inp = el('simIn'); const t = inp.value.trim(); if (!t || S.busy) return;
-    inp.value = ''; el('chips').replaceChildren(); el('simErr').textContent = ''; S.busy = true;
-    const m = {me: true, t, v: null}; S.msgs.push(m); S.n++; S.typing = true; draw();
-    grade(asLines(), S.msgs.length - 1).then((v) => { m.v = v; draw(); }).catch(() => { m.v = {rating: 'good', elo: 1000, sure: 0}; draw(); });
-    try {
-      const sys = 'You are role-playing a person in a texting simulator so the user can practise texting. Stay in character; never mention being an AI or a simulator.\n\nCharacter: ' + p[2] + '. ' + p[5] + '\n\nStyle: texting on a phone. Short, casual, natural messages, no stage directions or quotes. Usually one message, sometimes two. You track a hidden interest 0..100 (now ' + S.interest + '). Be fair: a good message is +3..+8, a bland one 0..-3, a bad one -5..-10.\nJSON only: {"replies":["<message>","<optional second>"],"interest":<0..100>}';
-      const txt = await chat([{role: 'system', content: sys}, ...S.msgs.map((x) => ({role: x.me ? 'user' : 'assistant', content: x.t}))], {temperature: .9, max_tokens: 200, response_format: {type: 'json_object'}});
-      const j = json(txt) || {replies: [txt]};
-      const replies = (Array.isArray(j.replies) ? j.replies : [j.reply]).filter(Boolean).slice(0, 2);
-      for (const r of replies) { await new Promise((res) => setTimeout(res, 500 + Math.min(1200, r.length * 22))); if (S.abort.signal.aborted) return; S.msgs.push({me: false, t: String(r)}); draw(); }
-      S.interest = Math.max(0, Math.min(100, Math.round(Number(j.interest) || S.interest))); meter();
-      if (S.interest >= 100 || S.interest <= 0) { el('simErr').style.color = 'inherit'; el('simErr').textContent = S.interest >= 100 ? p[1] + " They're in. You got the date." : p[1] + ' Left on read. They lost interest.'; }
-    } catch (err) { el('simErr').textContent = err.message; }
-    S.typing = false; S.busy = false; draw();
-  };
-  el('hint').onclick = async () => {
-    const b = el('hint'); b.disabled = true; b.textContent = 'Thinking…';
-    try {
-      const t = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical.'}, {role: 'user', content: 'Simulated person: ' + p[2] + ' — ' + p[3] + '.\nConversation (me = the user):\n' + (S.msgs.map((m) => (m.me ? 'me' : 'them') + ': ' + m.t).join('\n') || '(nothing yet — the user must open)') + '\n\nWrite 3 different messages the user could send next, in the user\'s voice: natural, confident, not cringe, each under 20 words, each a different approach. JSON only: {"options":["...","...","..."]}'}], {response_format: {type: 'json_object'}});
-      const ch = el('chips'); ch.replaceChildren();
-      (json(t)?.options || []).slice(0, 3).forEach((o) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = o; x.onclick = () => { el('simIn').value = o; el('simIn').focus(); ch.replaceChildren(); }; ch.append(x); });
-    } catch (err) { el('simErr').textContent = err.message; }
-    b.disabled = false; b.textContent = '💡 Hint';
-  };
-  el('review').onclick = async () => {
-    const mine = S.msgs.filter((m) => m.me && m.v); if (!mine.length) return;
-    const b = el('review'); b.disabled = true; b.textContent = 'Reviewing…';
-    const acc = Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length), elo = Math.round(mine.reduce((a, m) => a + m.v.elo, 0) / mine.length);
-    const counts = {}; mine.forEach((m) => counts[m.v.rating] = (counts[m.v.rating] || 0) + 1);
-    const rep = el('report');
-    rep.innerHTML = '<div class="stats"><div><b>' + elo + '</b><small>Your Elo</small></div><div><b>' + acc + '%</b><small>Accuracy</small></div><div><b>' + S.interest + '%</b><small>Interest</small></div></div><div class="counts" style="margin:.75rem 0">' +
-      LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join('') + '</div><p class="fb" id="fb">…</p>';
-    try {
-      const fb = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical; no markdown headings.'}, {role: 'user', content: 'The user practised texting ' + p[2] + '. Final interest: ' + S.interest + '/100.\n\n' + S.msgs.map((m) => (m.me ? 'me' : 'them') + ': ' + m.t + (m.v ? '  [' + L[m.v.rating].title + ']' : '')).join('\n') + '\n\nGive feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it), and one concrete thing to try next time. Then one rewrite of their worst message.'}], {max_tokens: 320});
-      rep.querySelector('#fb').textContent = fb;
-    } catch { rep.querySelector('#fb').textContent = 'The coach could not be reached for the written review — the numbers above are still yours.'; }
-    b.disabled = false; b.textContent = 'End & review'; rep.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-  };
-  draw();
+function closeSheet() { sheet.classList.remove('on'); }
+sheet.onclick = (e) => { if (e.target === sheet) closeSheet(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheet.classList.contains('on')) closeSheet(); });
+$('themeBtn').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'night' ? '' : 'night'; };
+$('legendBtn').onclick = () => { const d = document.createElement('div'); d.className = 'legend'; d.innerHTML = LABELS.map(([id, t]) => '<div><img alt="" src="' + iconUrl(id) + '">' + t + '</div>').join(''); openSheet('Labels', d); };
+function pickPersona() {
+  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.5rem';
+  const intro = document.createElement('p'); intro.style.cssText = 'margin:0;color:var(--secondary);font-size:.9375rem'; intro.textContent = "Pick who you're texting. They won't make it easy: every message gets a chess rating.";
+  root.append(intro);
+  PERSONAS.forEach((p) => { const b = document.createElement('button'); b.className = 'persona' + (p === persona ? ' on' : ''); b.innerHTML = '<span class="e">' + p.e + '</span><span><b>' + p.name + '</b><small>' + p.tag + '</small></span>'; b.onclick = () => { closeSheet(); start(p); }; root.append(b); });
+  openSheet('Who are you texting?', root);
 }
+$('avatar').onclick = $('who').onclick = pickPersona;
+$('reviewBtn').onclick = async () => {
+  await Promise.allSettled([...grading]);
+  const mine = msgs.filter((m) => m.out && m.v);
+  const root = document.createElement('div'); root.style.cssText = 'display:flex;flex-direction:column;gap:.75rem';
+  if (!mine.length) { root.textContent = 'Send a few messages first — then the coach has something to review.'; return openSheet('Review', root); }
+  const acc = Math.round(mine.reduce((a, m) => a + L[m.v.rating].acc, 0) / mine.length);
+  const counts = {}; mine.forEach((m) => counts[m.v.rating] = (counts[m.v.rating] || 0) + 1);
+  root.innerHTML = '<div class="stats"><div><b>' + elo + '</b><small>Your rating</small></div><div><b>' + acc + '%</b><small>Accuracy</small></div><div><b>' + interest + '%</b><small>Interest</small></div></div><div class="counts">' +
+    LABELS.filter(([id]) => counts[id]).map(([id, t]) => '<span><img alt="" src="' + iconUrl(id) + '">' + t + ' × ' + counts[id] + '</span>').join('') + '</div><p class="fb" id="fb">The coach is reading your chat…</p>';
+  openSheet('Review', root);
+  try {
+    root.querySelector('#fb').textContent = await chat([{role: 'system', content: 'You are a warm, honest texting coach. Be specific, short and practical; no markdown headings.'}, {role: 'user', content: 'The user practised texting ' + persona.name + '. Final interest: ' + interest + '/100.\n\n' + msgs.map((m) => (m.out ? 'me' : 'them') + ': ' + m.text + (m.v ? '  [' + L[m.v.rating].title + ']' : '')).join('\n') + '\n\nGive feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it), and one concrete thing to try next time. Then one rewrite of their worst message.'}], {max_tokens: 320});
+  } catch { root.querySelector('#fb').textContent = 'The coach could not be reached for the written review — the numbers above are still yours.'; }
+};
 
-render();
-// the conversation above carries sample labels; the first tap on "Grade live" or any send asks Jev for real ones
-setTimeout(() => gradeAll(), 600);
+start(PERSONAS[0]);
 </script>
 </body>
 </html>

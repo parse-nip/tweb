@@ -1,6 +1,7 @@
 import {classifyLines} from '@lib/rizz/classifier';
 import {openRouterComplete, parseModelJson} from '@lib/rizz/openrouter';
-import {getRizzPersona, RizzDifficulty, RizzPersona} from '@lib/rizz/personas';
+import {PLAYER_START_ELO, updateElo} from '@lib/rizz/elo';
+import {getRizzPersona, RIZZ_DIFFICULTIES, RizzDifficulty, RizzPersona} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo, getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
 import {getRizzSettings} from '@lib/rizz/settings';
 
@@ -9,6 +10,8 @@ export type SimMessage = {
   from: 'me' | 'them',
   text: string,
   verdict?: RizzVerdict,
+  /** what this message did to the player's Elo */
+  delta?: number,
   /** the label is still being worked out */
   grading?: boolean
 };
@@ -18,8 +21,39 @@ export type SimState = {
   difficulty: RizzDifficulty,
   messages: SimMessage[],
   /** how interested they are in the user, 0..100 */
-  interest: number
+  interest: number,
+  /** the player's rating this game, and how many graded messages it holds */
+  elo: number,
+  moves: number,
+  /** how the game ended: the chat stops there */
+  ending?: SimEnding
 };
+
+/** checkmate: the date is won (the white badge). resign: the user gave up. left-on-read: they won (the black checkmate). */
+export type SimEnding = 'checkmate' | 'resign' | 'left-on-read';
+
+/** Interest at which the other person is won over: the game is checkmate */
+export const SIM_WIN_INTEREST = 95;
+
+export const getOpponentElo = (state: SimState) =>
+  getRizzPersona(state.personaId).elo + (RIZZ_DIFFICULTIES.find((item) => item.id === state.difficulty)?.eloShift ?? 0);
+
+/** The state after a graded message of the user: the Elo moves, and a Checkmate or Resign label ends the game. */
+export function applyVerdict(state: SimState, verdict: RizzVerdict): {state: SimState, delta: number} {
+  const {elo, delta} = updateElo(state.elo, getOpponentElo(state), verdict.rating, state.moves);
+  let ending = state.ending;
+  if(!ending && verdict.rating === 'checkmate') ending = 'checkmate';
+  else if(!ending && verdict.rating === 'resign') ending = 'resign';
+  return {state: {...state, elo, moves: state.moves + 1, ending}, delta};
+}
+
+/** The state after the other person's answer: interest decides whether the game is over. */
+export function applyInterest(state: SimState, interest: number): SimState {
+  let ending = state.ending;
+  if(!ending && interest >= SIM_WIN_INTEREST) ending = 'checkmate';
+  else if(!ending && interest <= 0) ending = 'left-on-read';
+  return {...state, interest, ending};
+}
 
 export const SIM_MAX_USER_MESSAGES = 30;
 
@@ -34,14 +68,15 @@ function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty) {
 
 Character: ${persona.name}. ${persona.prompt}
 
-Style: you are texting on a phone. Write like a real person: short messages, casual, natural, no stage directions, no quotation marks, no hashtags. Usually one message, sometimes two short ones. Match the language the user writes in.
+Style: you are texting on a phone. Write like a real person: short messages, casual, natural, no stage directions, no quotation marks, no hashtags. Usually one message, sometimes two short ones; each under 20 words, like a real text, never a paragraph. Match the language the user writes in.
+Ending: if the user clearly wins you over (a date or a number agreed, or you are completely sold), set interest to 100. If they lose you for good, set it to 0.
 Interest: you track a hidden "interest" number 0..100 in how much you like talking to the user. ${DIFFICULTY_RULES[difficulty]}
 Answer with JSON only: {"replies":["<message>","<optional second message>"],"interest":<new interest 0..100>}`;
 }
 
 export function createSimulation(personaId: string, difficulty: RizzDifficulty): SimState {
   const persona = getRizzPersona(personaId);
-  return {personaId: persona.id, difficulty, messages: [], interest: persona.startInterest};
+  return {personaId: persona.id, difficulty, messages: [], interest: persona.startInterest, elo: PLAYER_START_ELO, moves: 0};
 }
 
 function transcript(messages: SimMessage[]) {

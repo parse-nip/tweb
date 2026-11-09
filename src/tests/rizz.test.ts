@@ -4,7 +4,7 @@ import {getAccuracy, getAverageElo, isRizzRating, clampElo} from '@lib/rizz/rati
 import {getCachedVerdict, setCachedVerdicts, clearRatingCache} from '@lib/rizz/ratingCache';
 import {classifyLines} from '@lib/rizz/classifier';
 import {getPersonaReply, createSimulation} from '@lib/rizz/simulator';
-import {getRizzSuggestion} from '@lib/rizz/suggest';
+import {getRizzSuggestion, stripDraftEcho} from '@lib/rizz/suggest';
 import {setRizzSettings} from '@lib/rizz/settings';
 
 function mockCompletion(content: string) {
@@ -97,6 +97,18 @@ describe('rizz coach', () => {
     expect(await getRizzSuggestion({lines: [{mid: 1, out: false, text: 'tea?'}], draft: ''})).toBe('haha deal');
   });
 
+  it('drops the draft a model repeats at the start of a continuation', async() => {
+    expect(stripDraftEcho('hey bbg', 'hey bbg wanna hear my mix?')).toBe(' wanna hear my mix?');
+    expect(stripDraftEcho('tea sounds good, ', 'Tea sounds good, what kind of tea?')).toBe(' what kind of tea?');
+    expect(stripDraftEcho('so about this weekend', 'about this weekend I was thinking tea')).toBe(' I was thinking tea');
+    expect(stripDraftEcho('hello', 'what are you up to')).toBe('what are you up to');
+
+    mockCompletion('hey bbg wanna hear my bedroom mix?');
+    expect(await getRizzSuggestion({lines: [], draft: 'hey bbg'})).toBe(' wanna hear my bedroom mix?');
+    mockCompletion('hey bbg');
+    expect(await getRizzSuggestion({lines: [], draft: 'hey bbg'})).toBe('');
+  });
+
   it('takes the persona\'s replies and clamps its interest, and survives a model that ignores JSON', async() => {
     const state = createSimulation('sarcastic', 'hard');
     state.messages.push({id: 1, from: 'me', text: 'hey'});
@@ -106,5 +118,31 @@ describe('rizz coach', () => {
 
     mockCompletion('just plain text');
     expect(await getPersonaReply(state)).toEqual({replies: ['just plain text'], interest: state.interest});
+  });
+});
+
+describe('rizz Elo and checkmate', () => {
+  it('moves the Elo by the label against the opponent and ends the game on a checkmate or a resign', async() => {
+    const {updateElo, getExpectedScore} = await import('@lib/rizz/elo');
+    const {createSimulation, applyVerdict, applyInterest, getOpponentElo} = await import('@lib/rizz/simulator');
+
+    expect(getExpectedScore(1000, 1000)).toBeCloseTo(0.5);
+    expect(updateElo(800, 1000, 'brilliant', 0).delta).toBeGreaterThan(20);
+    expect(updateElo(800, 1000, 'blunder', 0).delta).toBeLessThan(-5);
+    expect(updateElo(1000, 1000, 'book', 20).delta).toBe(0);
+    // a beaten stronger opponent is worth more than a beaten weaker one
+    expect(updateElo(800, 1500, 'great', 20).delta).toBeGreaterThan(updateElo(800, 600, 'great', 20).delta);
+
+    const state = createSimulation('flirt', 'hard');
+    expect(getOpponentElo(state)).toBe(1900);
+    const good = applyVerdict(state, {rating: 'great', elo: 1800});
+    expect(good.state.elo).toBeGreaterThan(state.elo);
+    expect(good.state.moves).toBe(1);
+    expect(good.state.ending).toBeUndefined();
+    expect(applyVerdict(state, {rating: 'checkmate', elo: 2800}).state.ending).toBe('checkmate');
+    expect(applyVerdict(state, {rating: 'resign', elo: 100}).state.ending).toBe('resign');
+    expect(applyInterest(state, 96).ending).toBe('checkmate');
+    expect(applyInterest(state, 0).ending).toBe('left-on-read');
+    expect(applyInterest(state, 60).ending).toBeUndefined();
   });
 });

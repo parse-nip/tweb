@@ -1,4 +1,4 @@
-import {createSignal, For, onCleanup, Show, batch, createEffect} from 'solid-js';
+import {createSignal, For, onCleanup, Show, batch, createEffect, on} from 'solid-js';
 import PopupElement, {createPopup} from '@components/popups/indexTsx';
 import CheckboxFieldTsx from '@components/checkboxFieldTsx';
 import Row from '@components/rowTsx';
@@ -17,7 +17,7 @@ import {cancelQueuedVerdicts} from '@lib/rizz/ratingService';
 import {RIZZ_DIFFICULTIES, RIZZ_PERSONAS, RizzDifficulty, getRizzPersona} from '@lib/rizz/personas';
 import {RIZZ_RATINGS, getRizzRatingDef} from '@lib/rizz/ratings';
 import {
-  SIM_MAX_USER_MESSAGES, SimMessage, SimReport, SimState, createSimulation, getPersonaReply, getSimHints, getSimReport, gradeSimMessage
+  SIM_MAX_USER_MESSAGES, SimMessage, SimReport, SimState, applyInterest, applyVerdict, createSimulation, getPersonaReply, getSimHints, getSimReport, gradeSimMessage
 } from '@lib/rizz/simulator';
 import {
   DEFAULT_CLASSIFIER_MODEL, DEFAULT_FAST_MODEL, getRizzSettings, hasRizzKey, setRizzSettings
@@ -105,7 +105,6 @@ function SimulatorTab() {
   const [error, setError] = createSignal('');
   const [report, setReport] = createSignal<SimReport>();
   const [reportBusy, setReportBusy] = createSignal(false);
-  const [outcome, setOutcome] = createSignal<'' | 'won' | 'lost'>('');
 
   const abort = new AbortController();
   onCleanup(() => abort.abort());
@@ -115,7 +114,7 @@ function SimulatorTab() {
   const grading = new Set<Promise<any>>();
 
   const userCount = () => sim()?.messages.filter((message) => message.from === 'me').length ?? 0;
-  const finished = () => !!outcome() || userCount() >= SIM_MAX_USER_MESSAGES;
+  const finished = () => !!sim()?.ending || userCount() >= SIM_MAX_USER_MESSAGES;
 
   createEffect(() => {
     sim()?.messages.length;
@@ -127,6 +126,11 @@ function SimulatorTab() {
     setSim((state) => state && {...state, messages: state.messages.map((message) => message.id === id ? {...message, ...changes} : message)});
   };
 
+  // the game is over: the coach's review opens by itself
+  createEffect(on(() => sim()?.ending, (ending) => {
+    if(ending && !report()) setTimeout(() => void review(), 1400);
+  }, {defer: true}));
+
   const start = () => {
     batch(() => {
       setSim(createSimulation(personaId(), difficulty()));
@@ -134,7 +138,6 @@ function SimulatorTab() {
       setHints([]);
       setError('');
       setReport(undefined);
-      setOutcome('');
     });
   };
 
@@ -155,7 +158,18 @@ function SimulatorTab() {
 
     const index = next.messages.length - 1;
     const gradePromise = gradeSimMessage(next, index, abort.signal)
-    .then((verdict) => patch(message.id, {verdict, grading: false}))
+    .then((verdict) => {
+      if(!verdict) return patch(message.id, {grading: false});
+      // the label moves the Elo, and a Checkmate or a Resign ends the game
+      setSim((current) => {
+        if(!current) return current;
+        const applied = applyVerdict(current, verdict);
+        return {
+          ...applied.state,
+          messages: applied.state.messages.map((item) => item.id === message.id ? {...item, verdict, delta: applied.delta, grading: false} : item)
+        };
+      });
+    })
     .catch(() => patch(message.id, {grading: false}));
     grading.add(gradePromise);
     void gradePromise.finally(() => grading.delete(gradePromise));
@@ -171,9 +185,18 @@ function SimulatorTab() {
         setSim((current) => current && {...current, messages: [...current.messages, messages[messages.length - 1]]});
       }
 
-      setSim((current) => current && {...current, interest});
-      if(interest >= 100) setOutcome('won');
-      else if(interest <= 0) setOutcome('lost');
+      await Promise.allSettled([...grading]);
+      setSim((current) => {
+        if(!current) return current;
+        const next = applyInterest(current, interest);
+        if(next.ending !== 'checkmate' || current.ending) return next;
+        // won over by interest: the message that did it is the mating move
+        const lastMine = [...next.messages].reverse().find((item) => item.from === 'me');
+        return {
+          ...next,
+          messages: next.messages.map((item) => item === lastMine ? {...item, verdict: {rating: 'checkmate' as const, elo: 2800, reason: 'Checkmate'}, grading: false} : item)
+        };
+      });
     } catch(err) {
       if(!abort.signal.aborted) setError((err as Error).message || 'The simulator could not answer.');
     } finally {
@@ -251,8 +274,8 @@ function SimulatorTab() {
           <>
             <div class={styles.meter}>
               <div class={styles.meterText}>
-                <span>{persona().emoji} {persona().name}</span>
-                <span>Interest {state().interest}%</span>
+                <span>{persona().emoji} {persona().name}{typing() ? ' · typing…' : ''}</span>
+                <span>♟ {state().elo} Elo · Interest {state().interest}%</span>
               </div>
               <div class={styles.meterBar}><div class={styles.meterFill} style={{width: state().interest + '%'}} /></div>
             </div>
@@ -283,10 +306,17 @@ function SimulatorTab() {
 
             <Show when={error()}><div class={styles.error}>{error()}</div></Show>
 
-            <Show when={outcome()}>
-              <div class={styles.banner}>
-                {outcome() === 'won' ? `${persona().emoji} They're in. You got the date.` : `${persona().emoji} Left on read. They lost interest.`}
-              </div>
+            <Show when={state().ending}>
+              {(ending) => (
+                <div class={styles.banner}>
+                  <span class={styles.bannerIcon}>
+                    {createRatingGlyph(getRizzRatingDef(ending() === 'resign' ? 'resign' : 'checkmate'), ending() === 'left-on-read')}
+                  </span>
+                  {ending() === 'checkmate' ? `Checkmate. ${persona().emoji} You won them over.` :
+                    ending() === 'resign' ? 'You resigned. The chat is over.' :
+                      `Checkmate. ${persona().emoji} They left you on read.`}
+                </div>
+              )}
             </Show>
 
             <Show when={hints().length}>

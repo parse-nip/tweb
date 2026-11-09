@@ -5,6 +5,27 @@ import {getRizzSettings} from '@lib/rizz/settings';
 const SYSTEM = `You ghostwrite text messages for the user ("me") in a chat with another person ("them"). You write ONLY the text of the message, nothing else: no quotes, no labels, no explanation, no emoji unless the chat already uses them.
 Style: sound like the user, not like a poet or a pickup-line book. Short (under 20 words), natural, confident, warm, with a little personality or humour. Answer what they actually said, then move the conversation forward. Never be needy, creepy or try-hard. Write in the language of the conversation.`;
 
+/**
+ * A model asked to "continue" often starts by repeating the draft, whole or from its last words ("tea sounds good, tea
+ * sounds good, what kind…"). The longest tail of the draft the answer begins with is dropped, so only the new words stay.
+ */
+export function stripDraftEcho(draft: string, text: string) {
+  const typed = draft.replace(/\s+$/, '');
+  if(!typed.trim()) return text;
+
+  const norm = (value: string) => value.toLowerCase();
+  const words = typed.split(/\s+/);
+  // the whole draft first, then ever shorter tails of it (word-aligned)
+  for(let start = 0; start < words.length; ++start) {
+    const tail = words.slice(start).join(' ');
+    if(tail.length >= 2 && norm(text).startsWith(norm(tail)) && (start === 0 || tail.length >= 4)) {
+      return text.slice(tail.length).replace(/^[\s]+(?=[^\s.,!?;:)\]])/, ' ');
+    }
+  }
+
+  return text;
+}
+
 export type RizzSuggestionArgs = {
   lines: RizzLine[],
   /** what the user has typed; empty to get a whole reply */
@@ -19,10 +40,10 @@ export type RizzSuggestionArgs = {
 export async function getRizzSuggestion({lines, draft, signal}: RizzSuggestionArgs) {
   const history = lines.slice(-14).map((line) => `${line.out ? 'me' : 'them'}: ${line.text.replace(/\s+/g, ' ').slice(0, 400)}`).join('\n');
   const task = draft.trim() ?
-    `The user has started typing: "${draft}"\nWrite ONLY the words that continue it, to be appended right after the typed text (so do not repeat what is typed). Finish the thought in a way that lands well.` :
+    `The user has started typing: "${draft}"\nWrite ONLY the words that come AFTER it, to be appended right after the typed text. Do NOT repeat, quote or rephrase anything already typed: your answer must start with the first new word. Finish the thought in a way that lands well.` :
     'Write the best next message from the user.';
 
-  const text = (await openRouterComplete({
+  let text = (await openRouterComplete({
     model: getRizzSettings().fastModel,
     temperature: 0.8,
     maxTokens: 80,
@@ -33,7 +54,9 @@ export async function getRizzSuggestion({lines, draft, signal}: RizzSuggestionAr
     ]
   })).trim().replace(/^["“'`]+|["”'`]+$/g, '').replace(/\n+/g, ' ');
 
-  if(!text) return '';
+  const continuation = draft.trim() ? stripDraftEcho(draft, text).replace(/^\s+(?=[.,!?;:)\]])/, '') : text;
+  if(!continuation.trim()) return '';
+  text = continuation;
   // join it to the draft: a space unless the draft already ends in one or the continuation starts with punctuation
   const needsSpace = !!draft && !/\s$/.test(draft) && !/^[\s.,!?;:)\]]/.test(text);
   return (needsSpace ? ' ' : '') + text;

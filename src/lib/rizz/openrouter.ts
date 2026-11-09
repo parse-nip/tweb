@@ -26,13 +26,25 @@ async function post(path: string, payload: unknown, signal?: AbortSignal) {
   // attribution OpenRouter shows in its dashboard
   headers['X-Title'] = 'tweb Rizz Coach';
 
-  const response = await fetch(getRizzBaseUrl() + path, {method: 'POST', headers, signal, body: JSON.stringify(payload)});
-  const body = await response.json().catch((): any => undefined);
-  if(!response.ok) {
-    throw new RizzApiError(body?.error?.message || `OpenRouter answered ${response.status}`, response.status);
-  }
+  // a rate limit, an upstream hiccup or a dropped connection is worth a second and a third try: a chat that
+  // goes quiet for one of them looks broken
+  const RETRY_DELAYS = [700, 1800];
+  for(let attempt = 0; ; ++attempt) {
+    try {
+      const response = await fetch(getRizzBaseUrl() + path, {method: 'POST', headers, signal, body: JSON.stringify(payload)});
+      const body = await response.json().catch((): any => undefined);
+      if(response.ok) return body;
 
-  return body;
+      const error = new RizzApiError(body?.error?.message || `OpenRouter answered ${response.status}`, response.status);
+      if(response.status !== 429 && response.status < 500) throw error;
+      if(attempt >= RETRY_DELAYS.length) throw error;
+    } catch(err) {
+      if(signal?.aborted || err instanceof RizzApiError && err.status < 500 && err.status !== 429) throw err;
+      if(attempt >= RETRY_DELAYS.length) throw err;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[attempt]));
+  }
 }
 
 export type RizzDecisionQuestions = Record<string, {type: 'choice' | 'noul' | 'score', instructions: string, criteria: Record<string, string> | string[]}>;
