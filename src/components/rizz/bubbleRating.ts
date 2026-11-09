@@ -1,5 +1,6 @@
 import type {Message} from '@layer';
 import type Chat from '@components/chat/chat';
+import createRatingGlyph from '@components/rizz/ratingGlyph';
 import {toast} from '@components/toast';
 import classNames from '@helpers/string/classNames';
 import type {Middleware} from '@helpers/middleware';
@@ -85,7 +86,7 @@ export function attachRizzRating({chat, bubble, bubbleContainer, message, our, m
 
     const def = getRizzRatingDef(verdict.rating);
     badge.style.setProperty('--rizz-color', def.color);
-    badge.textContent = def.symbol;
+    badge.replaceChildren(createRatingGlyph(def));
     badge.title = describe(verdict);
     badge.setAttribute('aria-label', describe(verdict));
   };

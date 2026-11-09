@@ -19,31 +19,38 @@ export class RizzApiError extends Error {
   }
 }
 
-/** OpenRouter's chat completions (OpenAI-compatible): the text of the first choice. */
-export async function openRouterComplete(options: RizzCompletionOptions): Promise<string> {
+async function post(path: string, payload: unknown, signal?: AbortSignal) {
   const {apiKey} = getRizzSettings();
   const headers: Record<string, string> = {'Content-Type': 'application/json'};
   if(apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  // optional attribution headers OpenRouter shows in its dashboard
+  // attribution OpenRouter shows in its dashboard
   headers['X-Title'] = 'tweb Rizz Coach';
 
-  const response = await fetch(getRizzBaseUrl() + '/chat/completions', {
-    method: 'POST',
-    headers,
-    signal: options.signal,
-    body: JSON.stringify({
-      model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 400,
-      ...(options.json ? {response_format: {type: 'json_object'}} : {})
-    })
-  });
-
+  const response = await fetch(getRizzBaseUrl() + path, {method: 'POST', headers, signal, body: JSON.stringify(payload)});
   const body = await response.json().catch((): any => undefined);
   if(!response.ok) {
     throw new RizzApiError(body?.error?.message || `OpenRouter answered ${response.status}`, response.status);
   }
+
+  return body;
+}
+
+export type RizzDecisionQuestions = Record<string, {type: 'choice' | 'noul' | 'score', instructions: string, criteria: Record<string, string> | string[]}>;
+
+/** A Decisions model (Jev): typed questions about `state`, answered with probabilities instead of text. */
+export function openRouterDecide(options: {model: string, state: unknown, questions: RizzDecisionQuestions, signal?: AbortSignal}) {
+  return post('/alpha/decisions', {model: options.model, state: options.state, questions: options.questions}, options.signal);
+}
+
+/** OpenRouter's chat completions (OpenAI-compatible): the text of the first choice. */
+export async function openRouterComplete(options: RizzCompletionOptions): Promise<string> {
+  const body = await post('/v1/chat/completions', {
+    model: options.model,
+    messages: options.messages,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.maxTokens ?? 400,
+    ...(options.json ? {response_format: {type: 'json_object'}} : {})
+  }, options.signal);
 
   const content = body?.choices?.[0]?.message?.content;
   if(typeof content !== 'string') throw new RizzApiError('OpenRouter returned no text');

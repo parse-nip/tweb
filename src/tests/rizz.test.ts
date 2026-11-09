@@ -68,6 +68,24 @@ describe('rizz coach', () => {
     expect((fetchMock.mock.calls[0] as any)[1].headers.Authorization).toBe('Bearer sk-test');
   });
 
+  it('asks a decisions model (Jev) one question per message and reads label and strength', async() => {
+    setRizzSettings({classifierModel: 'typesafe/jev-1.13'});
+    const fetchMock = vi.fn(async() => ({ok: true, status: 200, json: async() => ({answers: {
+      rating: {type: 'choice', choice: 'brilliant', confidence: 0.81},
+      strength: {type: 'score', score: 3}
+    }})}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const verdicts = await classifyLines([{mid: 1, out: false, text: 'hi'}, {mid: 2, out: true, text: 'tea this weekend?'}], [2]);
+    expect(verdicts.get(2)).toMatchObject({rating: 'brilliant', elo: 2600});
+    const call = fetchMock.mock.calls[0] as any;
+    expect(call[0]).toBe('https://openrouter.ai/api/alpha/decisions');
+    const request = JSON.parse(call[1].body);
+    expect(request.model).toBe('typesafe/jev-1.13');
+    expect(request.state.graded_message).toBe('tea this weekend?');
+    expect(Object.keys(request.questions.rating.criteria)).toContain('checkmate');
+  });
+
   it('joins a continuation to the draft and strips quotes', async() => {
     mockCompletion('"and you owe me tea"');
     expect(await getRizzSuggestion({lines: [], draft: 'chapter two'})).toBe(' and you owe me tea');

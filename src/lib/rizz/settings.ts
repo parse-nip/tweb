@@ -7,9 +7,11 @@ import {createRoot, createSignal} from 'solid-js';
 
 const STORAGE_KEY = 'tweb-rizz';
 
-export const DEFAULT_CLASSIFIER_MODEL = 'google/gemini-2.5-flash';
+// TypeSafe's Jev (https://openrouter.ai/~typesafe/jev-latest); `typesafe/jev-router` is the router listed on OpenRouter
+export const DEFAULT_CLASSIFIER_MODEL = 'typesafe/jev-1.13';
 export const DEFAULT_FAST_MODEL = 'google/gemini-2.5-flash-lite';
-export const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
+// the API root: chat completions are at <root>/v1/chat/completions, Decisions (Jev) at <root>/alpha/decisions
+export const DEFAULT_BASE_URL = 'https://openrouter.ai/api';
 
 export type RizzSettings = {
   apiKey: string,

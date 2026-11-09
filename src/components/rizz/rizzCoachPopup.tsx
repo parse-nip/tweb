@@ -22,6 +22,7 @@ import {
 import {
   DEFAULT_CLASSIFIER_MODEL, DEFAULT_FAST_MODEL, getRizzSettings, hasRizzKey, setRizzSettings
 } from '@lib/rizz/settings';
+import createRatingGlyph from '@components/rizz/ratingGlyph';
 import styles from '@components/rizz/rizzCoachPopup.module.scss';
 
 type Tab = 'simulator' | 'settings';
@@ -271,7 +272,7 @@ function SimulatorTab() {
                         style={{'--rizz-color': def()?.color}}
                         title={def() ? `${def().title} · ~${message.verdict.elo} Elo${message.verdict.reason ? ' — ' + message.verdict.reason : ''}` : undefined}
                       >
-                        {message.grading ? <div class={badgeStyles.pending} /> : def().symbol}
+                        {message.grading ? <div class={badgeStyles.pending} /> : createRatingGlyph(def())}
                       </div>
                     </Show>
                   </div>
@@ -331,7 +332,7 @@ function SimulatorTab() {
                   <div class={styles.counts}>
                     <For each={RIZZ_RATINGS.filter((def) => result().counts[def.id])}>{(def) => (
                       <span class={styles.count}>
-                        <span class={styles.countDot} style={{'--rizz-color': def.color}}>{def.symbol}</span>
+                        <span class={styles.countDot} style={{'--rizz-color': def.color}}>{createRatingGlyph(def)}</span>
                         {def.title} × {result().counts[def.id]}
                       </span>
                     )}</For>
