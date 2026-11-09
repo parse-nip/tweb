@@ -35,7 +35,7 @@ import {parseUriParamsLine} from '@helpers/string/parseUriParams';
 import getWebAuthImport from '@lib/accounts/getWebAuthImport';
 import Modes from '@config/modes';
 import {AuthState} from '@types';
-import DEBUG, {IS_BETA, IS_POPUP_SANDBOX, IS_WIDGET_SANDBOX} from '@config/debug';
+import DEBUG, {IS_BETA, IS_POPUP_SANDBOX, IS_RIZZ_GAME, IS_WIDGET_SANDBOX} from '@config/debug';
 import IS_INSTALL_PROMPT_SUPPORTED from '@environment/installPrompt';
 import cacheInstallPrompt from '@helpers/dom/installPrompt';
 import {fillLocalizedDates} from '@helpers/date';
@@ -468,6 +468,36 @@ if(import.meta.env.DEV || import.meta.env.VITE_PREVIEW) {
     await import('@components/popupSandbox/bootstrapState');
     const {startWidgetSandbox} = await import('@components/widgetSandbox/sandbox');
     await startWidgetSandbox();
+    return;
+  }
+
+  // Rizzmate (components/rizz), the game: Telegram's UI on the popup sandbox's offline environment — the mock
+  // managers, the bundled language pack and the theme; no session, no MTProto, no auth pages
+  if(IS_RIZZ_GAME) {
+    // `bootstrapState` goes first, on its own: it seeds the stores the app's modules read as they evaluate
+    await import('@components/popupSandbox/bootstrapState');
+    const {installSandboxEnvironment} = await import('@components/popupSandbox/environment');
+    await installSandboxEnvironment();
+    // the popups' <SolidJSHotReloadGuardProvider> hands out the app's top level
+    await import('@lib/solidjs/hotReloadGuardValue');
+    const [{default: RizzApp}, {render, createComponent}] = await Promise.all([
+      import('@components/rizz/app'),
+      import('solid-js/web')
+    ]);
+
+    document.title = 'Rizzmate';
+    document.body.classList.remove('has-auth-pages');
+    document.getElementById('auth-pages')?.remove();
+    document.getElementById('page-chats')?.remove();
+
+    // the bundled default wallpaper: no download, no managers needed
+    appChatBackground.attach();
+    appChatBackground.setBackground({transition: 'instant'});
+
+    const container = document.createElement('div');
+    container.id = 'rizz-root';
+    document.body.append(container);
+    render(() => createComponent(RizzApp, {}), container);
     return;
   }
 

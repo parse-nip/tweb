@@ -26,7 +26,7 @@ import {joinDeepPath} from '@helpers/object/setDeepProperty';
 import {setAppSettingsSilent} from '@stores/appSettings';
 import {appState, setAppStateSilent} from '@stores/appState';
 import {SETTINGS_INIT, STATE_INIT} from '@config/state';
-import {IS_SANDBOX_PAGE} from '@config/debug';
+import {IS_RIZZ_GAME, IS_SANDBOX_PAGE} from '@config/debug';
 import {createMockManagers, mockAppConfig} from './mockManagers';
 import {messages, peers, selfUser, SELF_PEER_ID} from './fixtures';
 
@@ -70,7 +70,7 @@ function seedFixtureMirrors() {
  * login page it can still be empty, and the standalone branch below would then overwrite the running
  * app's settings, state and managers with fixtures and never put them back.
  */
-export const isLiveSession = !IS_SANDBOX_PAGE;
+export const isLiveSession = !IS_SANDBOX_PAGE && !IS_RIZZ_GAME;
 
 if(!isLiveSession) {
   rootScope.managers = mockManagers.managers;

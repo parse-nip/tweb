@@ -1,0 +1,191 @@
+/*
+ * Profile (ratings, record, achievements), the game archive, and settings — Telegram's profile and
+ * settings screens: a big avatar, then sections of rows.
+ */
+
+import {createMemo, createSignal, For, Show} from 'solid-js';
+import {getScenario} from '@components/rizz/engine';
+import {AVATAR_COLORS} from '@components/rizz/content/bots';
+import {navigate} from '@components/rizz/router';
+import {profile, resetProfile, RizzProfile, setProfile, TIME_CONTROLS} from '@components/rizz/store';
+import {ACHIEVEMENTS} from '@components/rizz/world';
+import {Avatar, Block, Graph, ListRow, Page, SettingsRow, signed, styles, TextField, Topbar} from '@components/rizz/ui';
+import {confirmAction} from '@components/rizz/popups';
+import Row from '@components/rowTsx';
+import CheckboxFieldTsx from '@components/checkboxFieldTsx';
+import {IconTsx} from '@components/iconTsx';
+import {appSettings} from '@stores/appSettings';
+import {setSandboxTheme} from '@components/popupSandbox/environment';
+import classNames from '@helpers/string/classNames';
+
+const RATING_KINDS: {id: keyof RizzProfile['ratings'], label: string, icon: Icon}[] = [
+  {id: 'blitz', label: 'Blitz', icon: 'fire'},
+  {id: 'bullet', label: 'Bullet', icon: 'flag'},
+  {id: 'rapid', label: 'Rapid', icon: 'hourglass'},
+  {id: 'puzzles', label: 'Puzzles', icon: 'lamp'}
+];
+
+export function ProfileScreen() {
+  const [kind, setKind] = createSignal<keyof RizzProfile['ratings']>('blitz');
+  const record = createMemo(() => {
+    const games = profile.games;
+    const count = (result: string) => games.filter((game) => game.result === result).length;
+    const accuracy = games.length ? games.reduce((sum, game) => sum + game.accuracy, 0) / games.length : 0;
+    return {win: count('win'), draw: count('draw'), loss: count('loss'), accuracy};
+  });
+  const best = () => Math.max(profile.ratings.bullet, profile.ratings.blitz, profile.ratings.rapid);
+
+  return (
+    <>
+      <Topbar media={<Avatar name={profile.name} color={profile.color} size={42} />} title={profile.name} subtitle={`${profile.visit.streak} day streak`} />
+      <Page>
+        <div class={styles.profileHeader}>
+          <Avatar name={profile.name} color={profile.color} size={120} />
+          <div class={styles.profileName}>{profile.name}</div>
+          <div class={styles.profileStatus}>best rating {best()} · {profile.visit.streak} day streak</div>
+        </div>
+        <Block>
+          <div class={styles.statsGrid}>
+            <div><div class={classNames(styles.statValue, styles.up)}>{record().win}</div><div class={styles.statLabel}>Dates</div></div>
+            <div><div class={styles.statValue}>{record().draw}</div><div class={styles.statLabel}>Friendzoned</div></div>
+            <div><div class={classNames(styles.statValue, styles.down)}>{record().loss}</div><div class={styles.statLabel}>Ghosted</div></div>
+            <div><div class={styles.statValue}>{record().accuracy.toFixed(1)}</div><div class={styles.statLabel}>Accuracy</div></div>
+          </div>
+        </Block>
+        <Block name="Ratings">
+          <For each={RATING_KINDS}>{(item) => (
+            <SettingsRow
+              icon={item.icon}
+              title={String(profile.ratings[item.id])}
+              subtitle={`${item.label} · ${profile.played[item.id]} played`}
+              right={kind() === item.id && <IconTsx icon="check" class={styles.check} />}
+              onClick={() => setKind(item.id)}
+            />
+          )}</For>
+          <div class={styles.graphWrap}>
+            <Show when={profile.ratingHistory[kind()].length > 1} fallback={
+              <div class={styles.caption}>Play some {kind() === 'puzzles' ? 'puzzles' : 'rated games'} to see your graph.</div>
+            }>
+              <Graph values={profile.ratingHistory[kind()]} />
+            </Show>
+          </div>
+        </Block>
+        <Block name={`Achievements · ${ACHIEVEMENTS.filter((a) => a.done(profile)).length} of ${ACHIEVEMENTS.length}`}>
+          <div class={styles.achievements}>
+            <For each={ACHIEVEMENTS}>{(achievement) => (
+              <div class={classNames(styles.achievement, achievement.done(profile) && styles.done)}>
+                <div class={styles.achievementEmoji} aria-hidden="true">{achievement.emoji}</div>
+                <div class={styles.achievementTitle}>{achievement.title}</div>
+                <div class={styles.achievementDescription}>{achievement.description}</div>
+              </div>
+            )}</For>
+          </div>
+        </Block>
+        <Block>
+          <SettingsRow icon="archive" title="Game Archive" right={<span class={styles.rowMeta}>{profile.games.length}</span>} onClick={() => navigate({name: 'archive'})} />
+          <SettingsRow icon="settings" title="Settings" onClick={() => navigate({name: 'settings'})} />
+        </Block>
+      </Page>
+    </>
+  );
+}
+
+export function ArchiveScreen() {
+  return (
+    <>
+      <Topbar media={<Avatar icon="archive" color="archive" size={42} />} title="Game Archive" subtitle={`${profile.games.length} games`} />
+      <Show when={profile.games.length} fallback={<div class={styles.emptyPill}>No games yet</div>}>
+        <Page>
+          <Block caption="Open a game for its review.">
+            <For each={profile.games}>{(game) => (
+              <ListRow
+                media={<Avatar name={game.opponent.name} color={game.opponent.color} />}
+                title={`${game.opponent.name} · ${game.result === 'win' ? 'date' : game.result === 'draw' ? 'friendzoned' : 'ghosted'}`}
+                subtitle={`${getScenario(game.scenarioId)?.title} · ${game.timeControl ? TIME_CONTROLS[game.timeControl].label : 'bot'} · ${game.accuracy.toFixed(1)}%`}
+                meta={new Date(game.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                badge={game.ratingAfter !== undefined && (
+                  <span class={styles.rowMeta} classList={{[styles.up]: game.ratingAfter > game.ratingBefore, [styles.down]: game.ratingAfter < game.ratingBefore}}>
+                    {signed(game.ratingAfter - game.ratingBefore)}
+                  </span>
+                )}
+                onClick={() => navigate({name: 'review', gameId: game.id})}
+              />
+            )}</For>
+          </Block>
+        </Page>
+      </Show>
+    </>
+  );
+}
+
+function ToggleRow(props: {icon: Icon, title: string, subtitle?: string, checked: boolean, onChange: (value: boolean) => void}) {
+  return (
+    <Row>
+      <Row.Icon icon={props.icon} />
+      <Row.Title>{props.title}</Row.Title>
+      {props.subtitle && <Row.Subtitle>{props.subtitle}</Row.Subtitle>}
+      <Row.CheckboxFieldToggle>
+        <CheckboxFieldTsx toggle checked={props.checked} onChange={props.onChange} />
+      </Row.CheckboxFieldToggle>
+    </Row>
+  );
+}
+
+export function SettingsScreen() {
+  const isNight = () => appSettings.theme === 'night' ||
+    (appSettings.theme === 'system' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+
+  const reset = async() => {
+    const ok = await confirmAction({
+      title: 'Reset progress?',
+      description: 'Ratings, games, puzzles, bots and streaks are deleted from this browser.',
+      button: 'Reset',
+      danger: true
+    });
+    if(ok) {
+      resetProfile();
+      navigate({name: 'home'});
+    }
+  };
+
+  return (
+    <>
+      <Topbar media={<Avatar icon="settings" color="blue" size={42} />} title="Settings" />
+      <Page>
+        <div class={styles.profileHeader}>
+          <Avatar name={profile.name} color={profile.color} size={120} />
+          <div class={styles.profileName}>{profile.name}</div>
+        </div>
+        <Block name="Your name">
+          <TextField label="Name" value={profile.name} maxLength={24} onInput={(value) => setProfile('name', value.trim() || 'You')} />
+          <div class={styles.colors} role="radiogroup" aria-label="Avatar colour">
+            <For each={AVATAR_COLORS}>{(color) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={profile.color === color}
+                aria-label={color}
+                class={classNames('avatar-gradient', styles.colorSwatch, profile.color === color && styles.active)}
+                data-color={color}
+                onClick={() => setProfile('color', color)}
+              />
+            )}</For>
+          </div>
+        </Block>
+        <Block name="Game">
+          <ToggleRow
+            icon="like"
+            title="Vibe line"
+            subtitle="Who's winning, under the chat's header"
+            checked={profile.settings.vibeBar}
+            onChange={(value) => setProfile('settings', 'vibeBar', value)}
+          />
+          <ToggleRow icon="darkmode" title="Night mode" checked={isNight()} onChange={(value) => setSandboxTheme(value ? 'night' : 'day')} />
+        </Block>
+        <Block caption="Rizzmate runs entirely in your browser. Nothing you play is sent anywhere.">
+          <SettingsRow icon="delete" title="Reset progress" danger onClick={reset} />
+        </Block>
+      </Page>
+    </>
+  );
+}

@@ -1,0 +1,890 @@
+@use "../../scss/mixins" as *;
+
+// * The game in Telegram's clothes: the left column is the chat list, the middle a chat over the
+// * wallpaper (`appChatBackground`, behind everything) or a settings-like screen on the grey of the
+// * sidebars. Sizes are Telegram's own: 54px dialog avatars, a 56px header, a 3.5rem composer.
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  color: var(--primary-text-color);
+  // * what `.chat` defines for its own buttons over the wallpaper (base.scss): the bot keyboard's hover
+  --message-highlighting-hover-color: rgba(var(--message-highlighting-color-rgb), calc(var(--message-highlighting-alpha, .4) + .24));
+}
+
+// * Left column.
+
+.left {
+  flex: 0 0 auto;
+  width: 26.5rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-color);
+  border-inline-end: 1px solid var(--border-color);
+  min-height: 0;
+  position: relative;
+
+  @include respond-to(not-large-screens) {
+    width: 24rem;
+  }
+
+  @include respond-to(handhelds) {
+    width: 100%;
+    border: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  height: 3.5rem;
+  padding-inline: .5rem .75rem;
+  flex: 0 0 auto;
+
+  :global(.input-search) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.folders {
+  display: flex;
+  padding: 0 .5rem;
+  border-bottom: 1px solid var(--border-color);
+  flex: 0 0 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.folder {
+  position: relative;
+  height: 3rem;
+  padding: 0 .875rem;
+  border: none;
+  background: none;
+  color: var(--secondary-text-color);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  font-size: .9375rem;
+  cursor: pointer;
+  border-radius: .625rem .625rem 0 0;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--light-secondary-text-color);
+  }
+
+  &.active {
+    color: var(--primary-color);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline: .375rem;
+      bottom: 0;
+      height: .1875rem;
+      border-radius: .1875rem .1875rem 0 0;
+      background: var(--primary-color);
+    }
+  }
+}
+
+.list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  // * as `ul.chatlist`: the rows inset, their highlight rounded
+  padding: .5rem .5rem 5rem;
+
+  @include respond-to(handhelds) {
+    padding-inline: 0;
+  }
+}
+
+.rowActive {
+  --background: var(--primary-color) !important;
+
+  &, :global(.row-title), :global(.row-subtitle), :global(.row-title-right), :global(.row-subtitle-right), .rowMeta {
+    color: #fff !important;
+  }
+}
+
+.rowMeta {
+  font-size: .75rem;
+  color: var(--secondary-text-color);
+  white-space: nowrap;
+}
+
+.pinIcon {
+  color: var(--secondary-text-color);
+  font-size: 1.25rem;
+}
+
+.unreadBadge {
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 .375rem;
+  border-radius: .6875rem;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: .875rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.375rem;
+  text-align: center;
+
+  .rowActive & {
+    background: #fff;
+    color: var(--primary-color);
+  }
+}
+
+.titleChip {
+  font-size: .625rem;
+  font-weight: var(--font-weight-bold);
+  padding: .0625rem .25rem;
+  border-radius: .25rem;
+  background: var(--primary-color);
+  color: #fff;
+  margin-inline-end: .25rem;
+  vertical-align: .125rem;
+}
+
+.fab {
+  position: absolute;
+  inset-inline-end: 1.25rem;
+  bottom: 1.25rem;
+  width: 3.375rem;
+  height: 3.375rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // * stays the pencil's blue while its menu is open, as Telegram's does
+  &:global(.menu-open), &:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+  }
+}
+
+// * Avatars: Telegram's gradient circle, with initials or a white icon (as Saved Messages has).
+
+.avatar {
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--size) * .4) !important;
+  line-height: 1 !important;
+  user-select: none;
+}
+
+.avatarIcon {
+  font-size: calc(var(--size) * .5);
+  color: #fff;
+}
+
+// * The middle column.
+
+.center {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  @include respond-to(handhelds) {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.isHomeRoute .center {
+  @include respond-to(handhelds) {
+    display: none;
+  }
+}
+
+// * on a phone the open screen takes the whole width, as a chat does: the list waits behind it
+.app:not(.isHomeRoute) .left {
+  @include respond-to(handhelds) {
+    display: none;
+  }
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  height: 3.5rem;
+  padding-inline: .75rem .5rem;
+  background: var(--surface-color);
+  flex: 0 0 auto;
+  z-index: 2;
+  position: relative;
+  box-shadow: 0 1px 0 var(--border-color);
+
+  @include respond-to(handhelds) {
+    padding-inline-start: .25rem;
+  }
+}
+
+.topbarInfo {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.topbarTitle {
+  font-weight: var(--font-weight-bold);
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbarSubtitle {
+  font-size: .875rem;
+  color: var(--secondary-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accent {
+  color: var(--primary-color);
+}
+
+.backButton {
+  @include respond-to(not-handhelds) {
+    display: none !important;
+  }
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  height: 2rem;
+  line-height: 2rem;
+  padding: 0 .625rem;
+  border-radius: 1rem;
+  color: var(--secondary-text-color);
+  font-size: .9375rem;
+  transition: background-color .2s, color .2s;
+
+  &.running {
+    background: var(--light-primary-color);
+    color: var(--primary-color);
+  }
+
+  &.low {
+    background: var(--danger-color);
+    color: #fff;
+  }
+}
+
+// * The vibe: a thin line under the topbar, as a call or an audio player rides there.
+.vibe {
+  height: .1875rem;
+  background: var(--light-secondary-text-color);
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+  display: flex;
+}
+
+.vibeFill {
+  height: 100%;
+  background: linear-gradient(to right, #ff9ab8, #ff3d71);
+  transition: width .4s ease;
+
+  :global(.is-rtl) & {
+    background: linear-gradient(to left, #ff9ab8, #ff3d71);
+  }
+}
+
+// * A pinned bar under the topbar: the coach's word, as a pinned message sits there.
+.pinned {
+  display: flex;
+  gap: .625rem;
+  align-items: stretch;
+  padding-block: .375rem .5rem;
+  padding-inline: 1rem .75rem;
+  background: var(--surface-color);
+  box-shadow: 0 1px 0 var(--border-color);
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.pinnedLine {
+  flex: 0 0 .125rem;
+  border-radius: .0625rem;
+  background: var(--primary-color);
+}
+
+.pinnedBody {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .875rem;
+  line-height: 1.35;
+}
+
+.pinnedTitle {
+  color: var(--primary-color);
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+}
+
+.pinnedText {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pinnedMuted {
+  color: var(--secondary-text-color);
+  margin-top: .125rem;
+}
+
+// * The conversation.
+
+.scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: .5rem 0;
+}
+
+.messages {
+  max-width: var(--chat-input-max-width, 45.75rem);
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  min-height: 100%;
+  justify-content: flex-end;
+
+  @include respond-to(handhelds) {
+    padding: 0 .5rem;
+  }
+}
+
+.service {
+  align-self: center;
+  max-width: min(85%, 28rem);
+  margin: .5rem 0;
+  padding: .25rem .625rem;
+  border-radius: .75rem;
+  background: var(--message-time-background, rgba(0, 0, 0, .35));
+  color: #fff;
+  font-size: .9375rem;
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.bubble {
+  position: relative;
+  max-width: min(85%, 30rem);
+  padding-block: .3125rem .375rem;
+  padding-inline: .625rem .5rem;
+  border-radius: .9375rem;
+  background: var(--message-background-color, var(--surface-color));
+  box-shadow: 0 1px 2px rgba(16, 35, 47, .15);
+  font-size: var(--messages-text-size, 1rem);
+  line-height: 1.3125;
+  align-self: flex-start;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-inline-start: .5rem;
+
+  &.out {
+    align-self: flex-end;
+    background: var(--message-out-background-color);
+    margin-inline: 0 .5rem;
+  }
+
+  &.tail {
+    border-end-start-radius: 0;
+
+    &.out {
+      border-end-start-radius: .9375rem;
+      border-end-end-radius: 0;
+    }
+  }
+
+  &.selectable {
+    cursor: pointer;
+  }
+
+  &.selected {
+    box-shadow: 0 0 0 2px var(--primary-color);
+  }
+
+  &.ghost {
+    align-self: center;
+    background: var(--message-time-background, rgba(0, 0, 0, .35));
+    box-shadow: none;
+    color: #fff;
+    font-size: .8125rem;
+    font-weight: var(--font-weight-bold);
+    padding: .125rem .625rem;
+    margin: .25rem 0;
+  }
+}
+
+.bubbleIn {
+  @include animation-level-global(1) {
+    animation: bubbleIn .2s ease-out;
+  }
+}
+
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.tailShape {
+  position: absolute;
+  bottom: 0;
+  inset-inline-start: -8.4px;
+  width: 11px;
+  height: 20px;
+  background-color: var(--message-background-color, var(--surface-color));
+  // * Telegram's own tail (`.bubble-tail` in _chatBubble.scss): its shape cut out of a box
+  clip-path: path("M3 19h6V2c-.193 2.84-.876 5.767-2.05 8.782-.904 2.325-2.446 4.485-4.625 6.48A1 1 0 0 0 3 19z");
+  transform: translateY(1px) scaleX(var(--reflect, 1));
+
+  .out & {
+    inset-inline: auto -8.4px;
+    background-color: var(--message-out-background-color);
+    transform: translateY(1px) scaleX(calc(-1 * var(--reflect, 1)));
+  }
+}
+
+.time {
+  float: inline-end;
+  margin-inline-start: .5rem;
+  margin-top: .4375rem;
+  margin-bottom: -.25rem;
+  font-size: .75rem;
+  color: var(--message-time-color, var(--secondary-text-color));
+  user-select: none;
+  line-height: 1;
+  display: inline-flex;
+  gap: .125rem;
+  align-items: center;
+
+  .out & {
+    color: var(--message-out-time-color, var(--message-out-primary-color));
+  }
+
+  :global(.tgico) {
+    font-size: 1.125rem;
+    margin-block: -.25rem;
+  }
+}
+
+// * a move's classification: a small mark on the bubble's corner, as a reaction sits there
+.classBadge {
+  position: absolute;
+  top: -.375rem;
+  inset-inline-start: -.5rem;
+  z-index: 1;
+}
+
+.typingBubble {
+  display: inline-flex;
+  gap: .25rem;
+  padding: .75rem .875rem;
+
+  span {
+    width: .4375rem;
+    height: .4375rem;
+    border-radius: 50%;
+    background: var(--secondary-text-color);
+    opacity: .5;
+
+    @include animation-level-global(1) {
+      animation: typingDot 1.2s infinite;
+    }
+
+    &:nth-child(2) {
+      animation-delay: .2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: .4s;
+    }
+  }
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% {
+    opacity: .3;
+  }
+
+  30% {
+    opacity: 1;
+  }
+}
+
+.emptyPill {
+  margin: auto;
+  padding: .25rem .75rem;
+  border-radius: .875rem;
+  background: var(--message-time-background, rgba(0, 0, 0, .35));
+  color: #fff;
+  font-weight: var(--font-weight-bold);
+  font-size: .9375rem;
+}
+
+// * The composer: Telegram's input box, with the bot keyboard under it, or a plate of one action.
+
+.composer {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: calc(var(--chat-input-max-width, 45.75rem) + 2rem);
+  margin: 0 auto;
+  padding: .25rem 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+
+  @include respond-to(handhelds) {
+    padding: .25rem .5rem .5rem;
+  }
+
+  :global(.reply-keyboard) {
+    max-width: none;
+  }
+
+  :global(.reply-markup-button) {
+    padding: .5625rem .75rem;
+    line-height: 1.3;
+    min-height: 2.75rem;
+  }
+
+  // * a reply's own text decides its direction, whatever the interface's is
+  :global(.reply-markup-button-text) {
+    unicode-bidi: plaintext;
+  }
+}
+
+.inputBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  min-height: 3.5rem;
+  padding: 0 .5rem;
+  background: var(--surface-color);
+  border-radius: .9375rem;
+  border-end-end-radius: 0;
+  box-shadow: 0 1px 2px rgba(16, 35, 47, .15);
+  margin-inline-end: .5rem;
+
+  .tailShape {
+    inset-inline: auto -8.4px;
+    background-color: var(--surface-color);
+    transform: translateY(1px) scaleX(calc(-1 * var(--reflect, 1)));
+  }
+
+  :global(.chat-input-plate) {
+    flex: 1 1 auto;
+    --button-size: 3rem;
+  }
+}
+
+.inputPlaceholder {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 .5rem;
+  color: var(--secondary-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// * Screens that are not conversations: Telegram's settings, sections on the sidebar grey.
+
+.page {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  background: var(--background-color);
+}
+
+.pageInner {
+  max-width: 35rem;
+  margin: 0 auto;
+  padding: .75rem 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+
+  @include respond-to(handhelds) {
+    padding-top: .5rem;
+  }
+}
+
+.profileHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.25rem 1rem .5rem;
+  gap: .25rem;
+}
+
+.profileName {
+  margin-top: .5rem;
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.profileStatus {
+  color: var(--secondary-text-color);
+  font-size: .875rem;
+}
+
+.heroEmoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.caption {
+  color: var(--secondary-text-color);
+  font-size: .875rem;
+  line-height: 1.4;
+}
+
+.bigButton {
+  margin: 0 1rem;
+  width: calc(100% - 2rem) !important;
+}
+
+.graph {
+  width: 100%;
+  height: 6rem;
+  display: block;
+}
+
+.graphWrap {
+  padding: .25rem 1rem .5rem;
+}
+
+.up {
+  color: var(--green-color, #4fae4e) !important;
+}
+
+.down {
+  color: var(--danger-color) !important;
+}
+
+.classDot {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  color: #fff;
+  font-size: .625rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 2px var(--surface-color);
+  line-height: 1;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: .25rem .5rem .5rem;
+  text-align: center;
+
+  @include respond-to(handhelds) {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: .75rem;
+  }
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  color: var(--secondary-text-color);
+  font-size: .8125rem;
+}
+
+.chips {
+  padding: .25rem 1rem .5rem;
+}
+
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: .25rem;
+  padding: 0 .5rem .25rem;
+}
+
+.achievement {
+  border-radius: .75rem;
+  padding: .625rem .375rem;
+  text-align: center;
+  opacity: .4;
+  filter: grayscale(1);
+
+  &.done {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+.achievementEmoji {
+  font-size: 1.75rem;
+}
+
+.achievementTitle {
+  font-weight: var(--font-weight-bold);
+  font-size: .8125rem;
+  margin-top: .125rem;
+}
+
+.achievementDescription {
+  font-size: .75rem;
+  color: var(--secondary-text-color);
+}
+
+.colors {
+  display: flex;
+  gap: .625rem;
+  flex-wrap: wrap;
+  padding: .25rem 1rem .5rem;
+}
+
+.colorSwatch {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 0 0 2px var(--surface-color), 0 0 0 2px transparent;
+  transition: box-shadow .15s;
+
+  &.active {
+    box-shadow: 0 0 0 2px var(--surface-color), 0 0 0 4px var(--primary-color);
+  }
+}
+
+.fieldWrap {
+  padding: .5rem 1rem;
+}
+
+.range {
+  padding: .25rem 1rem .5rem;
+
+  input {
+    width: 100%;
+    accent-color: var(--primary-color);
+  }
+}
+
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--secondary-text-color);
+  font-size: .8125rem;
+}
+
+.check {
+  color: var(--primary-color);
+  font-size: 1.5rem;
+}
+
+.resultPopup {
+  text-align: center;
+  padding: 0 1rem .5rem;
+}
+
+.resultPopupRoot :global(.popup-container) {
+  width: 22.5rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.confetti {
+  pointer-events: none;
+  z-index: 3;
+}
+
+.zonePromote :global(.row-title) {
+  color: var(--green-color, #4fae4e);
+}
+
+.zoneDemote :global(.row-title) {
+  color: var(--danger-color);
+}
+
+// * a card above a conversation, as a bot's description stands before its first message
+.introCard {
+  align-self: center;
+  width: min(100%, 22rem);
+  margin: .5rem 0 .75rem;
+  padding: .75rem 1rem;
+  border-radius: .9375rem;
+  background: var(--surface-color);
+  box-shadow: 0 1px 2px rgba(16, 35, 47, .15);
+  text-align: center;
+}
+
+.introTitle {
+  font-weight: var(--font-weight-bold);
+  margin-bottom: .25rem;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .375rem .75rem;
+  margin-top: .5rem;
+  font-size: .875rem;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.buttonWrap {
+  padding: 0 1rem;
+
+  .bigButton {
+    margin: 0;
+    width: 100% !important;
+  }
+}
