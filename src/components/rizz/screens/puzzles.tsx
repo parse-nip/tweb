@@ -43,7 +43,7 @@ export function PuzzleBoard(props: {
     setAnswer(text);
     setGrading(true);
     try {
-      const verdicts = await classifyLines([...lines(), {mid: ANSWER_MID, out: true, text}], [ANSWER_MID]);
+      const verdicts = await classifyLines([...lines(), {mid: ANSWER_MID, out: true, text}], [ANSWER_MID], undefined, {setting: props.puzzle.setting});
       const result = verdicts.get(ANSWER_MID);
       if(!result) throw new Error('no verdict');
       setVerdict(result);

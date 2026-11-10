@@ -16,7 +16,7 @@ export function botRating(bot: RizzBot, difficulty: RizzDifficulty) {
 
 /** A quick game: one of the three bots (at a difficulty) closest to the player's rating. */
 export function quickBot(random: () => number = Math.random): {bot: RizzBot, difficulty: RizzDifficulty} {
-  const options = allBots().flatMap((bot) => RIZZ_DIFFICULTIES.map((difficulty) => ({
+  const options = allBots().filter((bot) => !bot.custom).flatMap((bot) => RIZZ_DIFFICULTIES.map((difficulty) => ({
     bot,
     difficulty: difficulty.id,
     gap: Math.abs(botRating(bot, difficulty.id) - profile.ratings.rizz)
@@ -26,11 +26,14 @@ export function quickBot(random: () => number = Math.random): {bot: RizzBot, dif
 
 export type RizzAchievement = {id: string, emoji: string, title: string, description: string, done: (p: RizzProfile) => boolean};
 
+/** The games that count: a bot of the player's own is practice. */
+const rated = (p: RizzProfile) => p.games.filter((game) => !game.opponent.custom);
+
 export const ACHIEVEMENTS: RizzAchievement[] = [
-  {id: 'first-game', emoji: '💬', title: 'First words', description: 'Finish your first game', done: (p) => p.games.length > 0},
-  {id: 'first-date', emoji: '💘', title: 'It\'s a date', description: 'Win a game', done: (p) => p.games.some((g) => g.result === 'win')},
-  {id: 'brilliant', emoji: '💎', title: 'Brilliant!!', description: 'Send a Brilliant message in a game', done: (p) => p.games.some((g) => g.messages.some((m) => m.verdict?.rating === 'brilliant'))},
-  {id: 'flawless', emoji: '🎯', title: 'Flawless', description: 'Play a game with 90+ accuracy', done: (p) => p.games.some((g) => g.accuracy >= 90)},
+  {id: 'first-game', emoji: '💬', title: 'First words', description: 'Finish your first game', done: (p) => rated(p).length > 0},
+  {id: 'first-date', emoji: '💘', title: 'It\'s a date', description: 'Win a game', done: (p) => rated(p).some((g) => g.result === 'win')},
+  {id: 'brilliant', emoji: '💎', title: 'Brilliant!!', description: 'Send a Brilliant message in a game', done: (p) => rated(p).some((g) => g.messages.some((m) => m.verdict?.rating === 'brilliant'))},
+  {id: 'flawless', emoji: '🎯', title: 'Flawless', description: 'Play a game with 90+ accuracy', done: (p) => rated(p).some((g) => g.accuracy >= 90)},
   {id: 'bot-slayer', emoji: '🤖', title: 'Bot whisperer', description: 'Beat three different bots', done: (p) => p.beatenBots.length >= 3},
   {id: 'gm', emoji: '👑', title: 'Thawed the ex', description: 'Win back the Ex Who Left You on Read', done: (p) => p.beatenBots.includes('ex')},
   {id: 'puzzles-10', emoji: '🧩', title: 'Puzzler', description: 'Solve 10 puzzles', done: (p) => p.puzzlesSolved.length >= 10},
@@ -38,7 +41,7 @@ export const ACHIEVEMENTS: RizzAchievement[] = [
   {id: 'daily-3', emoji: '📅', title: 'Habit', description: 'Solve the daily puzzle 3 days in a row', done: (p) => p.daily.streak >= 3},
   {id: 'student', emoji: '🎓', title: 'Student of the game', description: 'Finish every lesson', done: (p) => p.lessonsDone.length >= 4},
   {id: '1200', emoji: '📈', title: 'Club player', description: 'Reach a 1200 rating', done: (p) => p.ratings.rizz >= 1200},
-  {id: 'hard', emoji: '🔥', title: 'No easy mode', description: 'Win a game on Hard', done: (p) => p.games.some((g) => g.result === 'win' && g.opponent.difficulty === 'hard')}
+  {id: 'hard', emoji: '🔥', title: 'No easy mode', description: 'Win a game on Hard', done: (p) => rated(p).some((g) => g.result === 'win' && g.opponent.difficulty === 'hard')}
 ];
 
 /** The player as the personas read them, and who they are matched with: the opposite sex. */

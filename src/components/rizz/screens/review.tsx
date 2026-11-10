@@ -73,7 +73,7 @@ export default function ReviewScreen(props: {gameId: string}) {
     setRetry({text, grading: true});
     const lines = [...linesBefore(), {mid: 1e9, out: true, text}];
     try {
-      const verdicts = await classifyLines(lines.slice(-20), [1e9]);
+      const verdicts = await classifyLines(lines.slice(-20), [1e9], undefined, {setting: game.setting});
       setRetry({text, verdict: verdicts.get(1e9)});
     } catch(err) {
       setRetry({text});
@@ -124,6 +124,7 @@ export default function ReviewScreen(props: {gameId: string}) {
           </PinnedBar>
         }>
           <PinnedBar
+            muted={message().verdict?.better ? `Better: “${message().verdict.better}”` : undefined}
             title={message().verdict ?
               <><Glyph verdict={message().verdict} /> {getRizzRatingDef(message().verdict.rating).title} · ~{message().verdict.elo} Elo{message().delta !== undefined ? ` · ${signed(message().delta)}` : ''}</> :
               'Not graded'}

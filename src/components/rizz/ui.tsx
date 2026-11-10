@@ -289,6 +289,9 @@ function BubbleBadge(props: {verdict: RizzVerdict | 'pending', out?: boolean, de
                 ~{(props.verdict as RizzVerdict).elo} Elo{explained().sure ? ` · ${explained().sure}% sure` : ''}{delta() ? ` · ${delta()} rating` : ''}
               </span>
               <span>{explained().text}</span>
+              <Show when={(props.verdict as RizzVerdict).better}>
+                <span class={badgeStyles.whyBetter}>Better: “{(props.verdict as RizzVerdict).better}”</span>
+              </Show>
             </span>
           </button>
         );

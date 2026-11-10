@@ -101,6 +101,36 @@ export function createSimulation(personaId: string, difficulty: RizzDifficulty):
   return {personaId: persona.id, difficulty, messages: [], interest: persona.startInterest, elo: PLAYER_START_ELO, moves: 0};
 }
 
+/**
+ * Where the two met, written for this game: one or two sentences in the second person, fitted to who they are, the
+ * user opening the chat. Every game somewhere new; the caller falls back to a written scene if this fails.
+ */
+/** Kinds of meeting, one drawn per game: left to itself the model meets everyone on a dating app. */
+const MEETINGS = [
+  'a dating app match (invent a specific, funny bio line)', 'a house party', 'a friend\'s birthday dinner', 'the gym',
+  'a bookstore or library', 'a café line', 'a class or workshop', 'a concert or festival', 'a dog park', 'a delayed flight or train',
+  'a wrong-number text that turned fun', 'a reply to their story', 'a hiking trail', 'a laundromat', 'a comedy night',
+  'a coworking space', 'a wedding', 'a group chat of mutual friends', 'a pub quiz', 'a farmers market'
+];
+
+export async function generateSetting(persona: RizzPersona, options: {name?: string, gender?: RizzGender, userGender?: RizzGender, signal?: AbortSignal}) {
+  const meeting = MEETINGS[Math.floor(Math.random() * MEETINGS.length)];
+  const who = `${options.name || persona.firstName || 'them'}${options.gender ? `, a ${options.gender}` : ''} (${persona.name.replace(/^The /, '')}: ${persona.tagline}${persona.bio ? `; ${persona.bio}` : ''})`;
+  const text = await openRouterComplete({
+    model: getRizzSettings().fastModel,
+    temperature: 1.1,
+    maxTokens: 120,
+    signal: options.signal,
+    messages: [
+      {role: 'system', content: 'You set the scene for a texting game. Write ONLY the scene: one or two short sentences, second person ("You..."), present tense, under 40 words, no quotes, no names of real people or brands. It says how the user met the other person (or got their number) and why they are about to text: a dating app match with a specific bio, a party, a class, a gym, a café, a mutual friend, a wrong number, a shared trip — be concrete and different every time, and fit who they are. The user sends the first message.'},
+      {role: 'user', content: `The other person: ${who}.${options.userGender ? ` The user is a ${options.userGender}.` : ''} Where they met: ${meeting}. Write the scene.`}
+    ]
+  });
+  const scene = text.trim().replace(/^["“']+|["”']+$/g, '').replace(/\s+/g, ' ');
+  if(scene.length < 20 || scene.length > 400) throw new Error('no scene');
+  return scene;
+}
+
 /** A game that starts somewhere: the setting both sides know before the first message. */
 export function createSimulationAt(personaId: string, difficulty: RizzDifficulty, setting: string, options: Pick<SimState, 'name' | 'spice' | 'gender' | 'userGender'> = {}): SimState {
   return {...createSimulation(personaId, difficulty), setting, ...options};
@@ -198,12 +228,42 @@ export async function confirmTheirYes(state: SimState, replies: string[], signal
   return parseModelJson<{yes?: boolean}>(text)?.yes === true;
 }
 
-/** Grades the message at `index` of the simulation in the context of what came before it. */
-export async function gradeSimMessage(state: SimState, index: number, signal?: AbortSignal) {
+/**
+ * Grades the message at `index` of the simulation in the context of what came before it — and, once they have
+ * answered it, of how it landed (`reaction`).
+ */
+export async function gradeSimMessage(state: SimState, index: number, signal?: AbortSignal, reaction?: string) {
   const lines = state.messages.slice(0, index + 1).map((message) => ({mid: message.id, out: message.from === 'me', text: describeMessage(message.text)}));
   const mid = state.messages[index].id;
-  const verdicts = await classifyLines(lines.slice(-20), [mid], signal);
-  return verdicts.get(mid);
+  const persona = getRizzPersona(state.personaId);
+  const verdicts = await classifyLines(lines.slice(-20), [mid], signal, {
+    setting: state.setting,
+    them: `${state.name || persona.firstName || persona.name}${state.gender ? `, a ${state.gender}` : ''} — ${persona.name.replace(/^The /, '')}: ${persona.tagline}`,
+    reaction: reaction && describeMessage(reaction)
+  });
+  const verdict = verdicts.get(mid);
+  // * a blunder ends the game, so it gets a second opinion on that one question
+  if(verdict?.rating === 'blunder' && !(await isTrulyBlunder(lines.slice(-10), signal).catch(() => true))) {
+    return {...verdict, rating: 'mistake' as const, elo: Math.max(verdict.elo, 500)};
+  }
+  return verdict;
+}
+
+/** Whether the last message really ends a chat with anyone: rude, hostile, sexual without invitation, begging. */
+async function isTrulyBlunder(lines: {out: boolean, text: string}[], signal?: AbortSignal) {
+  const transcript = lines.map((line) => `${line.out ? 'user' : 'them'}: ${line.text.replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
+  const text = await openRouterComplete({
+    model: getRizzSettings().fastModel,
+    temperature: 0,
+    maxTokens: 20,
+    json: true,
+    signal,
+    messages: [
+      {role: 'system', content: 'Is the LAST user message rude, insulting, hostile, threatening, sexual without invitation, or desperate begging — something that would end a chat with almost anyone? A misread, a wrong guess, an awkward or pushy plan, or a playful joke is NOT. Answer with JSON only: {"blunder":true|false}'},
+      {role: 'user', content: transcript}
+    ]
+  });
+  return parseModelJson<{blunder?: boolean}>(text)?.blunder !== false;
 }
 
 const COACH_SYSTEM = `You are a warm, honest texting coach. The user is practising texting a simulated person. Be specific, short and practical; no lectures. Write in the language the user uses. Never use markdown headings.`;

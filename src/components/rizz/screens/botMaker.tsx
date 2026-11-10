@@ -113,7 +113,7 @@ export default function BotMakerScreen(props: {botId?: string}) {
           )}</For>
         </Block>
 
-        <Block name={`Strength · ${rating()} · ${ratingLabel(rating())}`} caption="Your messages are measured against this Elo: a win against a strong bot is worth more.">
+        <Block name={`Strength · ${rating()} · ${ratingLabel(rating())}`} caption="How picky they are. Your own bots are practice: games against them don't move your rating.">
           <div class={styles.range}>
             <input
               type="range"

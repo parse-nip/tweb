@@ -50,7 +50,9 @@ export type RizzVerdict = {
   /** an estimated Elo of the message, 100..3000 */
   elo: number,
   /** one short sentence on why */
-  reason?: string
+  reason?: string,
+  /** what the user could have sent instead, when it was not among the best */
+  better?: string
 };
 
 export function clampElo(elo: unknown, fallback = 800) {

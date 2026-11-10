@@ -44,7 +44,7 @@ export function BotsScreen(props: {botId?: string}) {
         <div class={styles.profileHeader}>
           <Avatar name={bot().name} color={bot().color} size={100} />
           <div class={styles.profileName}>{bot().name}</div>
-          <div class={styles.profileStatus}>{bot().kind || 'Your bot'} · {botRating(bot(), difficulty())}</div>
+          <div class={styles.profileStatus}>{bot().custom ? 'Your bot · practice, unrated' : `${bot().kind} · ${botRating(bot(), difficulty())}`}</div>
         </div>
         <Block>
           <div class={styles.bioText}>

@@ -238,6 +238,16 @@
   }
 }
 
+.whyBetter {
+  display: block;
+  margin-top: .375rem;
+  padding: .375rem .5rem;
+  border-radius: .5rem;
+  background: rgba(129, 182, 76, .14);
+  color: var(--primary-text-color);
+  font-size: .8125rem;
+}
+
 .whySub {
   color: var(--secondary-text-color);
   font-size: .75rem;

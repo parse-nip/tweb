@@ -26,6 +26,8 @@ export type RizzOpponent = {
   color: RizzAvatarColor,
   title?: string,
   bot?: boolean,
+  /** a bot of the player's own: practice, unrated */
+  custom?: boolean,
   /** who the simulator plays (`@lib/rizz/personas`), and how picky */
   personaId: string,
   difficulty: RizzDifficulty
@@ -41,6 +43,8 @@ export type RizzGameRecord = {
   messages: SimMessage[],
   /** their interest after each of the player's messages: the vibe graph */
   interest: number[],
+  /** where the two met */
+  setting?: string,
   result: RizzResult,
   reason: RizzEndReason,
   ratingBefore?: number,
@@ -169,7 +173,7 @@ export function pushRating(kind: keyof RizzProfile['ratings'], value: number) {
 export function saveGame(record: RizzGameRecord) {
   setProfile(produce((draft) => {
     draft.games = [record, ...draft.games].slice(0, MAX_GAMES);
-    if(record.opponent.bot && record.result === 'win' && !draft.beatenBots.includes(record.opponent.id)) {
+    if(record.opponent.bot && !record.opponent.custom && record.result === 'win' && !draft.beatenBots.includes(record.opponent.id)) {
       draft.beatenBots.push(record.opponent.id);
     }
   }));

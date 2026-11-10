@@ -8,10 +8,10 @@
 import {batch, createMemo, createSignal, onCleanup, onMount, Show} from 'solid-js';
 import {getScenarios, resultOfEnding, resultScore, RizzEndReason, RizzResult, updateRating} from '@components/rizz/engine';
 import {
-  applyInterest, applyVerdict, confirmTheirYes, createSimulationAt, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SimMessage,
+  applyInterest, applyVerdict, confirmTheirYes, createSimulationAt, generateSetting, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SimMessage,
   SimState, SimStatus
 } from '@lib/rizz/simulator';
-import type {RizzDifficulty} from '@lib/rizz/personas';
+import {getRizzPersona, RizzDifficulty} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo} from '@lib/rizz/ratings';
 import {navigate, RizzRoute, setLeaveGuard} from '@components/rizz/router';
 import {profile, pushRating, RizzGameRecord, RizzOpponent, RizzTimeControl, saveGame, TIME_CONTROLS} from '@components/rizz/store';
@@ -62,13 +62,16 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     rating: botRating(bot, picked.difficulty),
     color: bot.color,
     bot: true,
+    custom: bot.custom,
     personaId: bot.id,
     difficulty: picked.difficulty
   };
   const control = timeControl && TIME_CONTROLS[timeControl];
 
-  const setting = pickSetting();
-  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, {
+  // * a written scene to fall back on; the game's own is written for it as it opens (`generateSetting`)
+  const fallbackSetting = pickSetting();
+  const [sceneReady, setSceneReady] = createSignal(false);
+  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, fallbackSetting, {
     name: opponent.name,
     spice: profile.settings.botSpice,
     gender: bot.gender,
@@ -94,7 +97,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     aborts.forEach((controller) => controller.abort());
   });
 
-  const myTurn = () => !over() && !waiting() && !typing();
+  const myTurn = () => sceneReady() && !over() && !waiting() && !typing();
 
   const now = createNow(100);
   const remaining = createMemo(() => {
@@ -122,8 +125,10 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
 
     const state = sim();
     const verdicts = state.messages.filter((message) => message.from === 'me' && message.verdict).map((message) => message.verdict);
-    const ratingBefore = profile.ratings.rizz;
-    const ratingAfter = updateRating(ratingBefore, opponent.rating, resultScore(result), profile.played.rizz);
+    // * a bot of the player's own is practice: whoever writes the person can write a yes, so it moves no rating
+    const rated = !bot.custom;
+    const ratingBefore = rated ? profile.ratings.rizz : undefined;
+    const ratingAfter = rated ? updateRating(ratingBefore, opponent.rating, resultScore(result), profile.played.rizz) : undefined;
 
     const game: RizzGameRecord = {
       id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -132,6 +137,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       opponent,
       messages: state.messages.map(({grading, ...message}) => message),
       interest: interestAfter(),
+      setting: state.setting,
       result,
       reason,
       ratingBefore,
@@ -140,7 +146,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       gameRating: getAverageElo(verdicts)
     };
     setRecord(game);
-    pushRating('rizz', ratingAfter);
+    if(rated) pushRating('rizz', ratingAfter);
     saveGame(game);
 
     setTimeout(() => alive && showGameResult(game, {
@@ -155,13 +161,38 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   /** Their replies, one after another, each with its typing. */
   const deliver = async(replies: string[]) => {
     for(const reply of replies) {
+      // * nothing is typed into a chat that is over: the indicator never outlives the game
+      if(!alive || over()) return;
       setTyping(true);
       await new Promise((resolve) => setTimeout(resolve, typingDelay(reply)));
-      if(!alive || over()) return;
+      if(!alive || over()) {
+        setTyping(false);
+        return;
+      }
       batch(() => {
         setTyping(false);
         pushMessage({from: 'them', text: reply});
       });
+    }
+  };
+
+  /** The label on the player's message, once its fate is known: a blunder ends the game there and then. */
+  const grade = async(snapshot: SimState, index: number, id: number, reaction: string | undefined, signal: AbortSignal) => {
+    try {
+      const verdict = await gradeSimMessage(snapshot, index, signal, reaction);
+      if(!alive || !verdict) {
+        updateMessage(id, {grading: false});
+        return;
+      }
+      const {state, delta} = applyVerdict(sim(), verdict);
+      setSim({...state, messages: state.messages.map((message) => message.id === id ? {...message, verdict, delta, grading: false} : message)});
+      if(verdict.rating === 'blunder' && !over()) {
+        setEndLine(`${opponent.name} left you on read`);
+        finish('loss', 'blunder');
+      }
+    } catch(err) {
+      if(!signal.aborted) console.warn('[rizz] grading failed', err);
+      updateMessage(id, {grading: false});
     }
   };
 
@@ -177,47 +208,33 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     const replyAbort = new AbortController();
     aborts.add(gradeAbort).add(replyAbort);
 
-    // * the label and their answer are worked out side by side: the badge spins until the classifier has spoken
-    const grading = gradeSimMessage(snapshot, index, gradeAbort.signal).then((verdict) => {
-      if(!alive || !verdict) {
-        updateMessage(id, {grading: false});
-        return;
-      }
-      const {state, delta} = applyVerdict(sim(), verdict);
-      setSim({...state, messages: state.messages.map((message) => message.id === id ? {...message, verdict, delta, grading: false} : message)});
-      // * a blunder ends it on the spot: they stop typing and leave you on read — a loss, and the rating with it
-      if(verdict.rating === 'blunder' && !over()) {
-        replyAbort.abort();
-        setEndLine(`${opponent.name} left you on read`);
-        finish('loss', 'blunder');
-      }
-    }).catch((err) => {
-      if(!gradeAbort.signal.aborted) console.warn('[rizz] grading failed', err);
-      updateMessage(id, {grading: false});
-    });
-
+    // * their answer first, the label after it: a move is judged by how it landed, as an engine judges by the position
     let status: SimStatus;
+    let reaction: string;
     try {
       const answer = await getPersonaReply(snapshot, replyAbort.signal);
       // * the persona claims a yes too readily: the classifier checks their words before it counts
       status = answer.status === 'won' && !(await confirmTheirYes(snapshot, answer.replies, replyAbort.signal).catch(() => false)) ?
         'continue' :
         answer.status;
+      reaction = answer.replies.join(' ');
       if(!alive || over()) return;
+      const grading = grade(snapshot, index, id, reaction, gradeAbort.signal);
       await new Promise((resolve) => setTimeout(resolve, 300));
       setWaiting(false);
       await deliver(answer.replies);
       if(!alive || over()) return;
       setSim((state) => applyInterest(state, answer.interest, status));
       setInterestAfter((list) => [...list, sim().interest]);
+      await grading;
     } catch(err) {
       if(replyAbort.signal.aborted) return;
       setWaiting(false);
       toast(err instanceof Error && err.message ? err.message : 'They did not answer. Send again.');
-      // the message stays; they simply have not answered it
+      // * the message stays and is graded on its own; they simply have not answered it
+      await grade(snapshot, index, id, undefined, gradeAbort.signal);
     }
 
-    await grading;
     if(!alive || over()) return;
 
     // * a checkmate is theirs to give, in so many words: high interest only means they are keen (ask them out), and a
@@ -258,7 +275,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     if(over()) return;
     const ok = await confirmAction({
       title: 'Resign?',
-      description: 'Resigning counts as a loss and costs rating.',
+      description: bot.custom ? 'Resigning counts as a loss.' : 'Resigning counts as a loss and costs rating.',
       button: 'Resign',
       danger: true
     });
@@ -298,7 +315,20 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     return false;
   });
 
-  onMount(() => setTurnStartedAt(Date.now()));
+  onMount(async() => {
+    const controller = new AbortController();
+    aborts.add(controller);
+    const timeout = new Promise<string>((resolve) => setTimeout(() => resolve(undefined), 4000));
+    const scene = await Promise.race([
+      generateSetting(getRizzPersona(opponent.personaId), {name: opponent.name, gender: bot.gender, userGender: playerGender(), signal: controller.signal}).catch((): string => undefined),
+      timeout
+    ]);
+    if(!alive) return;
+    controller.abort();
+    if(scene) setSim((state) => ({...state, setting: scene}));
+    setSceneReady(true);
+    setTurnStartedAt(Date.now());
+  });
 
   const items = createMemo<BubbleData[]>(() => sim().messages.map((message): BubbleData => ({
     text: message.text,
@@ -316,7 +346,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     if(over()) return 'last seen just now';
     const vibe = profile.settings.vibeBar ? ` · interest ${sim().interest}` : '';
     const clock = control ? ` · ${control.label} ${formatTimeControl(control)}` : '';
-    return `${bot.kind || 'your bot'} · ${opponent.rating}${clock}${vibe}`;
+    return `${bot.custom ? 'your bot · practice, unrated' : `${bot.kind} · ${opponent.rating}`}${clock}${vibe}`;
   };
 
   return (
@@ -349,7 +379,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       <Show when={profile.settings.vibeBar}>
         <VibeLine probability={sim().interest / 100} />
       </Show>
-      <Messages service={`${setting}\nYou open.`} items={items()} typing={typing()} />
+      <Messages service={sceneReady() ? `${sim().setting}\nYou open.` : 'Setting the scene…'} items={items()} typing={typing()} />
       <div class={styles.composer}>
         <Show when={!over()} fallback={
           <ActionPlate

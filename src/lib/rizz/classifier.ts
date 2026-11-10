@@ -16,11 +16,24 @@ ${RIZZ_RATINGS.map((def) => `- ${def.id}: ${def.hint}`).join('\n')}
 
 Rules:
 - Grade EVERY message in "grade", for both sides ("me" is the user, "them" the other person).
-- Be honest and calibrated: most messages are "good" or "book". "brilliant" and "blunder" are rare. Do not inflate.
+- Be strict and calibrated, like an engine: about half of all messages are "good" or "book"; "excellent" and "great" are earned; "brilliant" is maybe one message in thirty.
+- Severity, worst first: "blunder" ONLY for messages that are rude, insulting, hostile, threatening, sexual without invitation, or desperate begging — the kind that ends a chat with anyone. A misjudged plan, a misread of what they said, a wrong guess or an awkward joke is never a blunder: a small slip is "inaccuracy", a pushy, presumptuous or confusing one is "mistake", ignoring what they offered is "miss".
+- Read like a socially smart person: recognise jokes, wordplay, teasing and callbacks to earlier details (a pun on what they just said, a joke that plays on their job, like needing to get hurt to see a nurse) and credit them. A playful or dark joke is not a blunder unless a reasonable person would actually be hurt or alarmed.
+- When "their reaction" to a message is given, it is evidence of how the message landed: a message they warmly took up cannot be a mistake, one that clearly put them off cannot be great. But grade the message, not their temperament: someone who overthinks or is hard to get reacts nervously to good messages too, and a misunderstanding that is plainly theirs is not the user's fault.
+- Asking them out, or proposing a time, when the vibe is warm is good play, not a mistake; doing it cold, or pushing past a no, is.
 - Judge by what the text says in context; ignore typos unless they change the meaning. The language of the chat may not be English.
 - "elo" is the estimated chess Elo of the message (100..3000): a plain "hey" is ~400-800, an average reply ~1000-1400, a sharp, witty or emotionally intelligent one 1800+, a brilliant one 2400+.
-- "reason" is at most 12 words and names the label's cause.
-Answer with JSON only: {"grades":[{"mid":<number>,"rating":"<label>","elo":<number>,"reason":"<short>"}]}`;
+- "reason" is at most 14 words, about THIS message, naming what made it land or miss.
+- "better" (for the user's messages graded below "excellent") is the message they could have sent instead, in their voice, under 20 words; omit it otherwise.
+Answer with JSON only: {"grades":[{"mid":<number>,"rating":"<label>","elo":<number>,"reason":"<short>","better":"<optional>"}]}`;
+
+/** What the grader is told besides the chat: where it happens, who the other person is, how they took the message. */
+export type RizzGradeContext = {
+  setting?: string,
+  them?: string,
+  /** their answer to the message being graded: how it landed */
+  reaction?: string
+};
 
 /** Jev and the rest of TypeSafe's models decide (probabilities) instead of chatting. */
 export const isDecisionsModel = (model: string) => /^~?typesafe\/jev/i.test(model);
@@ -91,7 +104,7 @@ async function decideLine(lines: RizzLine[], mid: number, model: string, signal?
   };
 }
 
-export async function classifyLines(lines: RizzLine[], gradeMids: number[], signal?: AbortSignal) {
+export async function classifyLines(lines: RizzLine[], gradeMids: number[], signal?: AbortSignal, context?: RizzGradeContext) {
   const model = getRizzSettings().classifierModel;
   if(isDecisionsModel(model)) {
     const verdicts = new Map<number, RizzVerdict>();
@@ -109,10 +122,10 @@ export async function classifyLines(lines: RizzLine[], gradeMids: number[], sign
     return verdicts;
   }
 
-  return classifyLinesWithChat(lines, gradeMids, signal);
+  return classifyLinesWithChat(lines, gradeMids, signal, context);
 }
 
-async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], signal?: AbortSignal) {
+async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], signal?: AbortSignal, context: RizzGradeContext = {}) {
   const grade = new Set(gradeMids);
   const transcript = lines.map((line) => `[${line.mid}] ${line.out ? 'me' : 'them'}: ${line.text.replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
   const answer = await openRouterComplete({
@@ -124,7 +137,12 @@ async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], sig
     signal,
     messages: [
       {role: 'system', content: SYSTEM_PROMPT},
-      {role: 'user', content: `Conversation (oldest first). Grade only these message ids: ${gradeMids.join(', ')}.\n\n${transcript}`}
+      {role: 'user', content: [
+        context.setting && `Where this happens: ${context.setting}`,
+        context.them && `The other person: ${context.them}`,
+        `Conversation (oldest first). Grade only these message ids: ${gradeMids.join(', ')}.\n\n${transcript}`,
+        context.reaction && `Their reaction to the last graded message: ${context.reaction}`
+      ].filter(Boolean).join('\n\n')}
     ]
   });
 
@@ -140,7 +158,8 @@ async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], sig
     verdicts.set(mid, {
       rating,
       elo: clampElo(item.elo),
-      reason: typeof item.reason === 'string' ? item.reason.slice(0, 120) : undefined
+      reason: typeof item.reason === 'string' ? item.reason.slice(0, 120) : undefined,
+      better: typeof item.better === 'string' && item.better.trim() && !/^(null|none|n\/a)$/i.test(item.better.trim()) ? item.better.trim().slice(0, 200) : undefined
     });
   }
 
