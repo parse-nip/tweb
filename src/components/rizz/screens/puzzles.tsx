@@ -1,68 +1,87 @@
 /*
- * Puzzles: a conversation cut at a decision, find the best reply. Rated puzzles move the puzzle
- * rating; the Daily Puzzle keeps a streak; Puzzle Rush is three minutes and three strikes.
+ * Puzzles: a conversation cut at a decision; the player writes the next message and the Coach's classifier grades
+ * it — Excellent and up solves it. Rated puzzles move the puzzle rating; the Daily Puzzle keeps a streak; Puzzle
+ * Rush is three minutes and three strikes.
  */
 
-import {createMemo, createSignal, JSX, onCleanup, Show} from 'solid-js';
+import {createSignal, JSX, onCleanup, Show} from 'solid-js';
 import {
-  classifyMove, dailyPuzzle, dayKey, isPuzzleSolved, optionOrder, pickPuzzle, puzzleTurn, RizzPuzzle, rushLadder,
-  updateRating
+  bestOption, dailyPuzzle, dayKey, isSolvingVerdict, pickPuzzle, puzzleTurn, RizzPuzzle, rushLadder, updateRating
 } from '@components/rizz/engine';
+import {classifyLines} from '@lib/rizz/classifier';
+import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
 import {profile, pushRating, setProfile} from '@components/rizz/store';
 import {addTrophies, TROPHIES} from '@components/rizz/world';
 import {
-  ActionPlate, answerVerdict, Avatar, Block, ClassDot, createNow, formatClock, InputBox, Messages, Page, PinnedBar,
-  ReplyKeyboard, signed, styles, Topbar
+  ActionPlate, Avatar, BubbleData, createNow, formatClock, Glyph, Messages, Page, PinnedBar, signed, styles, Topbar
 } from '@components/rizz/ui';
+import Composer from '@components/rizz/composer';
 import Button from '@components/buttonTsx';
+import {toast} from '@components/toast';
 import classNames from '@helpers/string/classNames';
 
+const ANSWER_MID = 1e9;
+
 /**
- * One puzzle: the conversation so far and the bot keyboard; once a reply is picked it goes into the
- * chat with its classification, and the coach's word is pinned above.
+ * One puzzle: the conversation so far and the message box. The player's message goes into the chat with a
+ * spinner for a badge, then the Coach's label; the verdict is pinned above with one strong reply to compare.
  */
 export function PuzzleBoard(props: {
   puzzle: RizzPuzzle,
-  onAnswer: (solved: boolean, picked: number) => void,
+  onAnswer: (solved: boolean, verdict: RizzVerdict) => void,
   /** Rush: no explanation, straight on. */
   quick?: boolean,
   /** What the composer offers once the puzzle is answered. */
   after?: JSX.Element
 }) {
-  const [picked, setPicked] = createSignal<number>();
-  const turn = () => puzzleTurn(props.puzzle);
-  const options = createMemo(() => optionOrder(turn(), props.puzzle.id.length * 7919 + props.puzzle.turn)
-  .map((index) => ({text: turn().options[index].text, index})));
+  const [answer, setAnswer] = createSignal<string>();
+  const [verdict, setVerdict] = createSignal<RizzVerdict>();
+  const [grading, setGrading] = createSignal(false);
 
-  const pick = (index: number) => {
-    if(picked() !== undefined) return;
-    setPicked(index);
-    props.onAnswer(isPuzzleSolved(props.puzzle, index), index);
+  const lines = () => props.puzzle.history.map((line, index) => ({mid: index + 1, out: line.mine, text: line.text}));
+
+  const submit = async(text: string) => {
+    setAnswer(text);
+    setGrading(true);
+    try {
+      const verdicts = await classifyLines([...lines(), {mid: ANSWER_MID, out: true, text}], [ANSWER_MID]);
+      const result = verdicts.get(ANSWER_MID);
+      if(!result) throw new Error('no verdict');
+      setVerdict(result);
+      props.onAnswer(isSolvingVerdict(result), result);
+    } catch(err) {
+      setAnswer(undefined);
+      toast('The coach could not grade that. Send it again.');
+    } finally {
+      setGrading(false);
+    }
   };
 
-  const verdict = () => picked() === undefined ? undefined : answerVerdict(turn(), picked());
-  const classification = () => picked() === undefined ? undefined : classifyMove(turn(), turn().options[picked()]);
-
-  const items = () => [
+  const items = (): BubbleData[] => [
     ...props.puzzle.history.map((line) => ({text: line.text, out: line.mine})),
-    ...(picked() !== undefined ? [{text: turn().options[picked()].text, out: true, classification: classification()}] : [])
+    ...(answer() ? [{text: answer(), out: true, verdict: verdict() || (grading() ? 'pending' as const : undefined)}] : [])
   ];
 
   return (
     <>
       <Show when={verdict() && !props.quick}>
         <PinnedBar
-          title={<><ClassDot classification={classification()} /> {verdict().right ? 'Correct!' : 'Not quite'}</>}
-          muted={!verdict().right ? `Best: “${verdict().best.text}”` : undefined}
+          title={<><Glyph verdict={verdict()} /> {isSolvingVerdict(verdict()) ? 'Solved' : 'Not quite'} · {getRizzRatingDef(verdict().rating).title} · ~{verdict().elo} Elo</>}
+          muted={`A strong reply: “${bestOption(puzzleTurn(props.puzzle)).text}”`}
         >
-          {turn().options[picked()].why}
+          {verdict().reason || getRizzRatingDef(verdict().rating).hint}
         </PinnedBar>
       </Show>
-      <Messages service={props.puzzle.setting} items={items()} />
+      <Messages service={`${props.puzzle.setting}\nWrite the best next message.`} items={items()} />
       <div class={styles.composer}>
-        <Show when={picked() === undefined || props.quick} fallback={props.after}>
-          <InputBox>Find the best reply</InputBox>
-          <ReplyKeyboard options={options()} onPick={pick} disabled={picked() !== undefined} />
+        <Show when={!verdict() || props.quick} fallback={props.after}>
+          <Composer
+            placeholder={grading() ? 'The coach is grading…' : 'Your move…'}
+            disabled={grading() || !!verdict()}
+            lines={lines}
+            ghost={false}
+            onSend={submit}
+          />
         </Show>
       </div>
     </>
@@ -108,13 +127,7 @@ export function PuzzlesScreen() {
         </>}
       />
       <Show when={puzzle()} keyed>
-        {(current) => (
-          <PuzzleBoard
-            puzzle={current}
-            onAnswer={onAnswer}
-            after={<ActionPlate label="Next puzzle" onClick={next} />}
-          />
-        )}
+        {(current) => <PuzzleBoard puzzle={current} onAnswer={onAnswer} after={<ActionPlate label="Next puzzle" onClick={next} />} />}
       </Show>
     </>
   );
@@ -219,7 +232,7 @@ export function RushScreen() {
         return;
       }
       setIndex((value) => value + 1);
-    }, solved ? 350 : 700);
+    }, 900);
   };
 
   return (
@@ -244,7 +257,7 @@ export function RushScreen() {
             <div class={styles.profileStatus}>
               {phase() === 'over' ?
                 (newBest() ? 'New personal best!' : `Personal best: ${profile.rushBest}`) :
-                'As many puzzles as you can in 3 minutes, harder as you go. Three wrong answers and you\'re out.'}
+                'Write the best next message, as many times as you can in 3 minutes. Excellent or better scores; three misses and you\'re out.'}
             </div>
           </div>
           <div class={styles.buttonWrap}>
@@ -259,4 +272,3 @@ export function RushScreen() {
     </>
   );
 }
-

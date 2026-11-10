@@ -14,8 +14,12 @@ import type {ButtonMenuItemOptionsVerifiable} from '@components/buttonMenu';
 import ChatInputPlate, {CHAT_INPUT_PLATE_SINGLE_CLASS} from '@components/chat/controlPlate';
 import InputField from '@components/inputField';
 import ripple from '@components/ripple';
-import {bestOption, CLASSIFICATIONS, RizzClassification} from '@components/rizz/engine';
-import type {RizzTurn} from '@components/rizz/content/types';
+import createRatingGlyph from '@components/rizz/ratingGlyph';
+import badgeStyles from '@components/rizz/ratingBadge.module.scss';
+import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
+import type {RizzLine} from '@lib/rizz/classifier';
+import {getRizzSuggestion} from '@lib/rizz/suggest';
+import {toast} from '@components/toast';
 import {navigate} from '@components/rizz/router';
 import styles from '@components/rizz/rizz.module.scss';
 
@@ -177,17 +181,42 @@ export function formatTime(date = new Date()) {
   return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-export function ClassDot(props: {classification: RizzClassification, class?: string}) {
-  const info = () => CLASSIFICATIONS[props.classification];
+/** A verdict as the Coach words it: label, Elo, why. */
+export function describeVerdict(verdict: RizzVerdict) {
+  const def = getRizzRatingDef(verdict.rating);
+  return `${def.title} · ~${verdict.elo} Elo` + (verdict.reason ? ` — ${verdict.reason}` : '');
+}
+
+/** A label's drawn badge on its own, as the Coach draws it (`components/rizz/icons`). */
+export function Glyph(props: {verdict: RizzVerdict | RizzVerdict['rating'], size?: number, dark?: boolean}) {
+  const rating = () => typeof(props.verdict) === 'string' ? props.verdict : props.verdict.rating;
   return (
     <span
-      class={classNames(styles.classDot, props.class)}
-      style={{'background-color': info().color}}
-      title={info().label}
-      aria-label={info().label}
+      class={styles.glyph}
+      style={{'--glyph-size': `${props.size ?? 20}px`}}
+      title={getRizzRatingDef(rating()).title}
       role="img"
+      aria-label={getRizzRatingDef(rating()).title}
     >
-      {info().symbol}
+      {createRatingGlyph(getRizzRatingDef(rating()), props.dark)}
+    </span>
+  );
+}
+
+/** The chess label on a bubble's corner that faces the middle of the chat, as the Coach puts it on a chat's. */
+function BubbleBadge(props: {verdict: RizzVerdict | 'pending', out?: boolean}) {
+  return (
+    <span
+      class={classNames(badgeStyles.badge, props.out ? badgeStyles.isOut : badgeStyles.isIn, props.verdict === 'pending' && badgeStyles.isPending)}
+      title={props.verdict !== 'pending' ? describeVerdict(props.verdict) : 'Grading…'}
+      onClick={(e) => {
+        e.stopPropagation();
+        if(props.verdict !== 'pending') toast(describeVerdict(props.verdict));
+      }}
+    >
+      <Show when={props.verdict !== 'pending'} fallback={<span class={badgeStyles.pending} />}>
+        {createRatingGlyph(getRizzRatingDef((props.verdict as RizzVerdict).rating), !props.out)}
+      </Show>
     </span>
   );
 }
@@ -196,7 +225,8 @@ export type BubbleData = {
   text: string,
   out?: boolean,
   time?: string,
-  classification?: RizzClassification,
+  /** the Coach's label: a spinner while it is worked out */
+  verdict?: RizzVerdict | 'pending',
   /** A line the chat says, not a person: "Seen", a result. */
   ghost?: boolean
 };
@@ -222,8 +252,8 @@ export function Bubble(props: BubbleData & {
       onClick={props.onClick}
       dir="auto"
     >
-      <Show when={props.classification}>
-        <ClassDot classification={props.classification} class={styles.classBadge} />
+      <Show when={props.verdict} keyed>
+        {(verdict) => <BubbleBadge verdict={verdict} out={props.out} />}
       </Show>
       {props.text}
       <Show when={props.time && !props.ghost}>
@@ -350,49 +380,6 @@ export function ActionPlate(props: {label: string, onClick: () => void, left?: P
   );
 }
 
-/** The bot keyboard the moves are picked from (`.reply-keyboard`); 1–4 on the keyboard pick too. */
-export function ReplyKeyboard(props: {
-  options: {text: string, index: number}[],
-  onPick: (index: number) => void,
-  disabled?: boolean,
-  hint?: number
-}) {
-  const onKeyDown = (e: KeyboardEvent) => {
-    if(props.disabled || e.ctrlKey || e.metaKey || e.altKey) return;
-    const target = e.target as HTMLElement;
-    if(target?.closest?.('input, textarea, [contenteditable="true"]')) return;
-    const n = Number(e.key);
-    if(n >= 1 && n <= props.options.length) {
-      e.preventDefault();
-      props.onPick(props.options[n - 1].index);
-    }
-  };
-  document.addEventListener('keydown', onKeyDown);
-  onCleanup(() => document.removeEventListener('keydown', onKeyDown));
-
-  return (
-    <div class="reply-keyboard is-shown active" role="group" aria-label="Your replies">
-      <div class="reply-markup">
-        <For each={props.options}>{(option) => (
-          <div class="reply-markup-row">
-            <button
-              type="button"
-              class="reply-markup-button rp"
-              ref={(el) => ripple(el)}
-              disabled={props.disabled}
-              style={props.hint === option.index ? {'box-shadow': 'inset 0 0 0 2px #fff'} : undefined}
-              onClick={() => props.onPick(option.index)}
-              dir="auto"
-            >
-              <span class="reply-markup-button-text" dir="auto">{option.text}</span>
-            </button>
-          </div>
-        )}</For>
-      </div>
-    </div>
-  );
-}
-
 /** A text field of Telegram's, labelled with plain text. */
 export function TextField(props: {label: string, value: string, maxLength?: number, onInput: (value: string) => void}) {
   const field = new InputField({label: 'Message', maxLength: props.maxLength, plainText: true});
@@ -417,12 +404,6 @@ export function formatClock(ms: number) {
 
 export function signed(value: number) {
   return (value > 0 ? '+' : value < 0 ? '−' : '±') + Math.abs(value);
-}
-
-/** Whether a pick was the best reply, and which reply was. */
-export function answerVerdict(turn: RizzTurn, picked: number) {
-  const best = bestOption(turn);
-  return {right: turn.options[picked] === best, best};
 }
 
 /** A sparkline of evaluations or ratings. */

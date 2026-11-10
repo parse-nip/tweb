@@ -68,8 +68,8 @@ export function BotsScreen() {
             <ListRow
               small
               media={<Avatar name={bot.name} color={bot.color} size={42} />}
-              title={<>{bot.title && <span class={styles.titleChip}>{bot.title}</span>}{bot.name}</>}
-              subtitle={`“${bot.greeting}”`}
+              title={bot.name}
+              subtitle={bot.tagline}
               meta={bot.custom ? `${bot.rating} · yours` : String(bot.rating)}
               badge={profile.beatenBots.includes(bot.id) && <IconTsx icon="check" class={styles.check} />}
               onClick={() => navigate({name: 'game', botId: bot.id, key: Date.now()})}

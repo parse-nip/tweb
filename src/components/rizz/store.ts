@@ -5,15 +5,18 @@
 
 import {createRoot, createEffect} from 'solid-js';
 import {createStore, produce, unwrap} from 'solid-js/store';
-import {dayKey, RizzEndReason, RizzMoveRecord, RizzResult} from '@components/rizz/engine';
+import {dayKey, RizzEndReason, RizzResult} from '@components/rizz/engine';
 import type {RizzAvatarColor, RizzBot} from '@components/rizz/content/bots';
+import type {RizzDifficulty} from '@lib/rizz/personas';
+import type {SimMessage} from '@lib/rizz/simulator';
+import type {RizzVerdict} from '@lib/rizz/ratings';
 
 export type RizzTimeControl = 'bullet' | 'blitz' | 'rapid';
 
 export const TIME_CONTROLS: {[key in RizzTimeControl]: {label: string, base: number, increment: number, icon: string}} = {
-  bullet: {label: 'Bullet', base: 45, increment: 2, icon: '⚡'},
-  blitz: {label: 'Blitz', base: 90, increment: 3, icon: '🔥'},
-  rapid: {label: 'Rapid', base: 180, increment: 5, icon: '⏱'}
+  bullet: {label: 'Bullet', base: 60, increment: 3, icon: '⚡'},
+  blitz: {label: 'Blitz', base: 180, increment: 5, icon: '🔥'},
+  rapid: {label: 'Rapid', base: 600, increment: 10, icon: '⏱'}
 };
 
 export type RizzOpponent = {
@@ -22,7 +25,10 @@ export type RizzOpponent = {
   rating: number,
   color: RizzAvatarColor,
   title?: string,
-  bot?: boolean
+  bot?: boolean,
+  /** who the simulator plays (`@lib/rizz/personas`), and how picky */
+  personaId: string,
+  difficulty: RizzDifficulty
 };
 
 export type RizzGameRecord = {
@@ -31,16 +37,19 @@ export type RizzGameRecord = {
   /** Rated games are online ones with a clock; bot games are unrated, as on chess.com. */
   timeControl?: RizzTimeControl,
   opponent: RizzOpponent,
-  scenarioId: string,
-  difficulty: number,
-  seed: number,
-  moves: RizzMoveRecord[],
+  /** the whole chat, the classifier's verdict on each of the player's messages */
+  messages: SimMessage[],
+  /** their interest after each of the player's messages: the vibe graph */
+  interest: number[],
   result: RizzResult,
   reason: RizzEndReason,
   ratingBefore?: number,
   ratingAfter?: number,
   accuracy: number,
-  gameRating: number
+  /** the mean Elo of the player's messages */
+  gameRating: number,
+  /** the coach's written review, once asked for */
+  feedback?: string
 };
 
 export type RizzProfile = {
@@ -58,11 +67,12 @@ export type RizzProfile = {
   lessonsDone: string[],
   beatenBots: string[],
   league: {week: string, division: number, trophies: number, lastResult?: 'promoted' | 'demoted' | 'stayed'},
-  settings: {vibeBar: boolean},
+  settings: {vibeBar: boolean, ghost: boolean},
   customBots: RizzBot[]
 };
 
-const STORAGE_KEY = 'rizz-profile-v1';
+// v2: games hold the Rizz Coach's chat and verdicts
+const STORAGE_KEY = 'rizz-profile-v2';
 const MAX_GAMES = 100;
 
 export function weekKey(date = new Date()) {
@@ -91,7 +101,7 @@ export function defaultProfile(): RizzProfile {
     lessonsDone: [],
     beatenBots: [],
     league: {week: weekKey(), division: 0, trophies: 0},
-    settings: {vibeBar: true},
+    settings: {vibeBar: true, ghost: true},
     customBots: []
   };
 }

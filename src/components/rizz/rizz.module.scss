@@ -888,3 +888,103 @@
     width: 100% !important;
   }
 }
+
+// * The composer's field: the textarea, with the ghost text drawn in a copy of its text under it.
+.composerField {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.composerInput,
+.ghostLayer {
+  font: inherit;
+  font-size: var(--messages-text-size, 1rem);
+  line-height: 1.3125;
+  padding: 1rem .5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: start;
+}
+
+.composerInput {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--primary-text-color);
+  max-height: 10rem;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--secondary-text-color);
+  }
+}
+
+.ghostLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ghostDraft {
+  color: transparent;
+}
+
+.ghostText {
+  color: var(--secondary-text-color);
+  opacity: .75;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.ghostKey {
+  pointer-events: auto;
+  cursor: pointer;
+  margin-inline-start: .375rem;
+  padding: 0 .3125rem;
+  border-radius: .25rem;
+  border: 1px solid var(--secondary-text-color);
+  color: var(--secondary-text-color);
+  font-size: .6875rem;
+  vertical-align: .125rem;
+}
+
+.sendButton {
+  color: var(--primary-color) !important;
+  transition: opacity .15s;
+}
+
+.sendIdle {
+  opacity: .4;
+}
+
+// * a label's drawn badge on its own (`Glyph`): the drawing is 18x19 with its shadow
+.glyph {
+  display: inline-flex;
+  width: var(--glyph-size);
+  height: calc(var(--glyph-size) * 19 / 18);
+  flex: 0 0 auto;
+  vertical-align: middle;
+
+  img {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.coachReview {
+  margin-top: .75rem;
+  padding-top: .625rem;
+  border-top: 1px solid var(--border-color);
+  text-align: start;
+  font-size: .875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}

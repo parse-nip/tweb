@@ -4,7 +4,8 @@
  * move on as the week goes by.
  */
 
-import {AVATAR_COLORS, BOTS, ONLINE_NAMES, RizzBot} from '@components/rizz/content/bots';
+import {AVATAR_COLORS, BOTS, botPersona, ONLINE_NAMES, RizzBot} from '@components/rizz/content/bots';
+import {RIZZ_DIFFICULTIES, RIZZ_PERSONAS, setCustomRizzPersonas} from '@lib/rizz/personas';
 import {hashString, seededRandom} from '@components/rizz/engine';
 import {profile, RizzOpponent, RizzProfile, RizzTimeControl, setProfile, weekKey} from '@components/rizz/store';
 
@@ -29,15 +30,26 @@ function pick<T>(items: T[], random: () => number) {
   return items[Math.floor(random() * items.length)];
 }
 
-/** An online opponent near the player's rating. */
+/**
+ * An online opponent near the player's rating: one of the personas, at the difficulty that puts its Elo closest to
+ * the rating drawn.
+ */
 export function findOpponent(timeControl: RizzTimeControl, random: () => number = Math.random): RizzOpponent {
   const rating = Math.max(100, Math.round(profile.ratings[timeControl] + (random() - 0.5) * 300));
   const name = pick(ONLINE_NAMES, random);
+  const options = RIZZ_PERSONAS.flatMap((persona) => RIZZ_DIFFICULTIES.map((difficulty) => ({
+    persona,
+    difficulty,
+    gap: Math.abs(persona.elo + difficulty.eloShift - rating)
+  }))).sort((a, b) => a.gap - b.gap).slice(0, 4);
+  const {persona, difficulty} = pick(options, random);
   return {
     id: 'online-' + name.toLowerCase() + '-' + rating,
     name,
     rating,
-    color: pick(AVATAR_COLORS, random)
+    color: pick(AVATAR_COLORS, random),
+    personaId: persona.id,
+    difficulty: difficulty.id
   };
 }
 
@@ -131,10 +143,10 @@ export type RizzAchievement = {id: string, emoji: string, title: string, descrip
 export const ACHIEVEMENTS: RizzAchievement[] = [
   {id: 'first-game', emoji: '💬', title: 'First words', description: 'Finish your first game', done: (p) => p.games.length > 0},
   {id: 'first-date', emoji: '💘', title: 'It\'s a date', description: 'Win a game', done: (p) => p.games.some((g) => g.result === 'win')},
-  {id: 'brilliant', emoji: '💎', title: 'Brilliant!!', description: 'Find a brilliant reply in a game', done: (p) => p.games.some((g) => g.moves.some((m) => m.classification === 'brilliant'))},
-  {id: 'flawless', emoji: '🎯', title: 'Flawless', description: 'Play a game with 95%+ accuracy', done: (p) => p.games.some((g) => g.accuracy >= 95)},
+  {id: 'brilliant', emoji: '💎', title: 'Brilliant!!', description: 'Send a Brilliant message in a game', done: (p) => p.games.some((g) => g.messages.some((m) => m.verdict?.rating === 'brilliant'))},
+  {id: 'flawless', emoji: '🎯', title: 'Flawless', description: 'Play a game with 90+ accuracy', done: (p) => p.games.some((g) => g.accuracy >= 90)},
   {id: 'bot-slayer', emoji: '🤖', title: 'Bot whisperer', description: 'Beat three different bots', done: (p) => p.beatenBots.length >= 3},
-  {id: 'gm', emoji: '👑', title: 'Grandmistress down', description: 'Beat Valentina', done: (p) => p.beatenBots.includes('valentina')},
+  {id: 'gm', emoji: '👑', title: 'Thawed the ex', description: 'Win back the Ex Who Left You on Read', done: (p) => p.beatenBots.includes('ex')},
   {id: 'puzzles-10', emoji: '🧩', title: 'Puzzler', description: 'Solve 10 puzzles', done: (p) => p.puzzlesSolved.length >= 10},
   {id: 'rush-10', emoji: '⚡', title: 'Rush hour', description: 'Score 10+ in Puzzle Rush', done: (p) => p.rushBest >= 10},
   {id: 'daily-3', emoji: '📅', title: 'Habit', description: 'Solve the daily puzzle 3 days in a row', done: (p) => p.daily.streak >= 3},
@@ -152,12 +164,19 @@ export function getBot(id: string) {
   return allBots().find((bot) => bot.id === id);
 }
 
+/** Hands the player's bots to the simulator as personas: on start, and on every change. */
+export function syncCustomPersonas() {
+  setCustomRizzPersonas(profile.customBots.map(botPersona));
+}
+
 export function saveCustomBot(bot: RizzBot) {
   setProfile('customBots', (list) => list.some((item) => item.id === bot.id) ?
     list.map((item) => item.id === bot.id ? bot : item) :
     [...list, bot]);
+  syncCustomPersonas();
 }
 
 export function deleteCustomBot(id: string) {
   setProfile('customBots', (list) => list.filter((item) => item.id !== id));
+  syncCustomPersonas();
 }

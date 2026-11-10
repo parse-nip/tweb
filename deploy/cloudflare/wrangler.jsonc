@@ -1,0 +1,14 @@
+{
+  // Rizzmate on Cloudflare: the game's static build, and the Rizz Coach's OpenRouter proxy (worker.js).
+  // Deploy with deploy/cloudflare/deploy.sh; the key is a secret: `wrangler secret put OPENROUTER_API_KEY`.
+  "name": "rizzmate",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./.assets",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+}

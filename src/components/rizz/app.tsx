@@ -15,7 +15,7 @@ import LESSONS from '@components/rizz/content/lessons';
 import {dayKey} from '@components/rizz/engine';
 import {navigate, route, RizzRoute} from '@components/rizz/router';
 import {profile, touchVisit} from '@components/rizz/store';
-import {allBots, DIVISIONS, leagueTable, settleLeague} from '@components/rizz/world';
+import {allBots, DIVISIONS, leagueTable, settleLeague, syncCustomPersonas} from '@components/rizz/world';
 import {Avatar, ListRow, menuItem, styles} from '@components/rizz/ui';
 import {setSandboxTheme} from '@components/popupSandbox/environment';
 import {appSettings} from '@stores/appSettings';
@@ -73,6 +73,8 @@ export default function RizzApp() {
   // * a visit counts for the streak; a new week settles last week's league
   touchVisit();
   settleLeague();
+  // * the player's own bots are personas the simulator can play
+  syncCustomPersonas();
 
   const search = new InputSearch({placeholder: 'Search', onChange: (value) => setQuery(value.trim().toLowerCase())});
 
@@ -136,8 +138,8 @@ export default function RizzApp() {
         route: {name: 'game', botId: bot.id, key: 0},
         text: 'bot ' + bot.name.toLowerCase(),
         media: <Avatar name={bot.name} color={bot.color} />,
-        title: <>{bot.title && <span class={styles.titleChip}>{bot.title}</span>}{bot.name}</>,
-        subtitle: bot.greeting,
+        title: bot.name,
+        subtitle: bot.tagline,
         meta: String(bot.rating),
         badge: profile.beatenBots.includes(bot.id) && <IconTsx icon="check" class={styles.pinIcon} />
       });

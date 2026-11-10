@@ -1,11 +1,10 @@
 /*
- * The bot maker: an opponent of the player's own — name, look, strength, personality, where you
- * meet and how they greet you. Kept with the player's progress (`profile.customBots`).
+ * The bot maker: a persona of the player's own for the Rizz Coach's simulator — name, look, strength (its Elo),
+ * a personality to start from, and who they are, in the player's words. Kept with the player's progress.
  */
 
 import {createSignal, For} from 'solid-js';
 import {AVATAR_COLORS, PERSONALITIES, RizzAvatarColor, RizzBot, RizzPersonality} from '@components/rizz/content/bots';
-import {difficultyForRating, getScenarios} from '@components/rizz/engine';
 import {navigate} from '@components/rizz/router';
 import {deleteCustomBot, getBot, saveCustomBot} from '@components/rizz/world';
 import {Avatar, Block, ListRow, Page, SettingsRow, styles, TextField, Topbar} from '@components/rizz/ui';
@@ -31,22 +30,21 @@ export default function BotMakerScreen(props: {botId?: string}) {
   const [color, setColor] = createSignal<RizzAvatarColor>(existing?.color ?? 'pink');
   const [rating, setRating] = createSignal(existing?.rating ?? 1000);
   const [personality, setPersonality] = createSignal<RizzPersonality>(existing?.personality ?? 'witty');
-  const [scenarioId, setScenarioId] = createSignal<string>(existing?.scenarioId);
-  const [greeting, setGreeting] = createSignal(existing?.greeting ?? '');
+  const [about, setAbout] = createSignal(existing?.custom ? (existing.prompt || '').replace(PERSONALITIES[existing.personality || 'witty'].prompt, '').trim() : '');
 
   const preview = (): RizzBot => {
     const persona = PERSONALITIES[personality()];
+    const description = about().trim();
     return {
       id: existing?.id ?? `custom-${Date.now().toString(36)}`,
       name: name().trim() || 'New bot',
       rating: rating(),
-      difficulty: difficultyForRating(rating()),
       color: color(),
-      tagline: persona.tagline,
-      greeting: greeting().trim() || persona.greeting,
+      tagline: description ? description.slice(0, 60) : persona.tagline,
       custom: true,
       personality: personality(),
-      scenarioId: scenarioId()
+      startInterest: persona.startInterest,
+      prompt: description ? `${persona.prompt} ${description}` : persona.prompt
     };
   };
 
@@ -77,7 +75,7 @@ export default function BotMakerScreen(props: {botId?: string}) {
           <ListRow
             media={<Avatar name={preview().name} color={color()} />}
             title={preview().name}
-            subtitle={`“${preview().greeting}”`}
+            subtitle={preview().tagline}
             meta={String(rating())}
           />
         </Block>
@@ -99,19 +97,8 @@ export default function BotMakerScreen(props: {botId?: string}) {
           </div>
         </Block>
 
-        <Block name={`Strength · ${rating()} · ${ratingLabel(rating())}`} caption="Higher-rated bots are harder to impress: good replies count for less and bad ones cost more.">
-          <div class={styles.range}>
-            <input
-              type="range"
-              min={MIN_RATING}
-              max={MAX_RATING}
-              step={50}
-              value={rating()}
-              aria-label="Rating"
-              onInput={(e) => setRating(+e.currentTarget.value)}
-            />
-            <div class={styles.rangeLabels}><span>{MIN_RATING}</span><span>{MAX_RATING}</span></div>
-          </div>
+        <Block name="Who are they?" caption="In your own words — the coach plays them like this. A job, a vibe, how they text, what wins them over.">
+          <TextField label="e.g. a barista who loves terrible puns" value={about()} maxLength={300} onInput={setAbout} />
         </Block>
 
         <Block name="Personality">
@@ -126,26 +113,19 @@ export default function BotMakerScreen(props: {botId?: string}) {
           )}</For>
         </Block>
 
-        <Block name="Greeting" caption="What they say on their profile. Leave it empty for the personality's own.">
-          <TextField label={PERSONALITIES[personality()].greeting} value={greeting()} maxLength={60} onInput={setGreeting} />
-        </Block>
-
-        <Block name="Where you meet">
-          <SettingsRow
-            icon="shuffle"
-            title="Anywhere"
-            subtitle="A different scenario every game"
-            right={!scenarioId() && <IconTsx icon="check" class={styles.check} />}
-            onClick={() => setScenarioId(undefined)}
-          />
-          <For each={getScenarios()}>{(scenario) => (
-            <SettingsRow
-              icon="location"
-              title={scenario.title}
-              right={scenarioId() === scenario.id && <IconTsx icon="check" class={styles.check} />}
-              onClick={() => setScenarioId(scenario.id)}
+        <Block name={`Strength · ${rating()} · ${ratingLabel(rating())}`} caption="Your messages are measured against this Elo: a win against a strong bot is worth more.">
+          <div class={styles.range}>
+            <input
+              type="range"
+              min={MIN_RATING}
+              max={MAX_RATING}
+              step={50}
+              value={rating()}
+              aria-label="Rating"
+              onInput={(e) => setRating(+e.currentTarget.value)}
             />
-          )}</For>
+            <div class={styles.rangeLabels}><span>{MIN_RATING}</span><span>{MAX_RATING}</span></div>
+          </div>
         </Block>
 
         <div class={styles.buttonWrap}>

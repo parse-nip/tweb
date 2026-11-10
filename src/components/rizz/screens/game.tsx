@@ -1,90 +1,66 @@
 /*
- * A game: a conversation against a bot (unrated, untimed, with a hint) or an online opponent
- * (rated, on a clock). Their messages arrive with Telegram's "typing…"; the player's moves are the
- * bot keyboard under the message box, the game's actions the topbar's menu.
+ * A game: a chat with one of the Rizz Coach's personas, played by its simulator (`@lib/rizz/simulator`). The
+ * player types; every message is graded by the Coach's classifier and wears its label as it lands; their hidden
+ * interest is the vibe line. Checkmate (they say yes) wins, left on read loses, a resign gives up. Online games
+ * are rated and on a clock; bot games are unrated, with the Coach's ghost text as the hint.
  */
 
 import {batch, createMemo, createSignal, onCleanup, onMount, Show} from 'solid-js';
+import {resultOfEnding, resultScore, RizzEndReason, RizzResult, updateRating} from '@components/rizz/engine';
 import {
-  acceptsDraw, bestOption, difficultyForRating, endGame, endingMessage, getScenario, getScenarios, newGame, optionOrder,
-  playMove, resultScore, RizzGameState, summarizeGame, updateRating, winProbability
-} from '@components/rizz/engine';
-import {PERSONALITIES} from '@components/rizz/content/bots';
+  applyInterest, applyVerdict, createSimulation, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SimMessage, SimState
+} from '@lib/rizz/simulator';
+import {getRizzPersona, RizzDifficulty} from '@lib/rizz/personas';
+import {getAccuracy, getAverageElo} from '@lib/rizz/ratings';
 import {navigate, RizzRoute, setLeaveGuard} from '@components/rizz/router';
 import {profile, pushRating, RizzGameRecord, RizzOpponent, RizzTimeControl, saveGame, TIME_CONTROLS} from '@components/rizz/store';
 import {addTrophies, findOpponent, getBot, TROPHIES} from '@components/rizz/world';
 import {
-  ActionPlate, Avatar, BubbleData, createNow, formatClock, formatTime, formatTimeControl, InputBox, menuItem, Messages,
-  ReplyKeyboard, styles, Topbar, VibeLine
+  ActionPlate, Avatar, BubbleData, createNow, formatClock, formatTime, formatTimeControl, menuItem, Messages, styles,
+  Topbar, VibeLine
 } from '@components/rizz/ui';
+import Composer, {ComposerHandle} from '@components/rizz/composer';
 import {ButtonIconTsx} from '@components/buttonIconTsx';
 import {confirmAction, showGameResult} from '@components/rizz/popups';
 import {toast} from '@components/toast';
 import classNames from '@helpers/string/classNames';
 
-const LAST_SCENARIO_KEY = 'rizz-last-scenario';
-
-function pickScenario(fixed?: string) {
-  if(fixed && getScenario(fixed)) return getScenario(fixed);
-  let last: string;
-  try {
-    last = localStorage.getItem(LAST_SCENARIO_KEY);
-  } catch(err) {}
-  const pool = getScenarios().filter((scenario) => scenario.id !== last);
-  const scenario = pool[Math.floor(Math.random() * pool.length)];
-  try {
-    localStorage.setItem(LAST_SCENARIO_KEY, scenario.id);
-  } catch(err) {}
-  return scenario;
-}
-
-/** How long they "type", by the length of what they say. */
+/** How long they "type" a reply of theirs, by its length. */
 function typingDelay(text: string) {
-  return Math.min(2400, 700 + text.length * 18 + Math.random() * 400);
+  return Math.min(2200, 500 + text.length * 25);
 }
+
+const BOT_DIFFICULTY: RizzDifficulty = 'medium';
 
 export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'game'}>}) {
   const bot = props.route.botId ? getBot(props.route.botId) : undefined;
   const timeControl: RizzTimeControl = bot ? undefined : props.route.timeControl || 'blitz';
   const opponent: RizzOpponent = bot ?
-    {id: bot.id, name: bot.name, rating: bot.rating, color: bot.color, title: bot.title, bot: true} :
+    {id: bot.id, name: bot.name, rating: bot.rating, color: bot.color, bot: true, personaId: bot.id, difficulty: BOT_DIFFICULTY} :
     findOpponent(timeControl);
-  const difficulty = bot ?
-    bot.difficulty * (bot.personality ? PERSONALITIES[bot.personality].factor : 1) :
-    difficultyForRating(opponent.rating);
-  const scenario = pickScenario(bot?.scenarioId);
-  const seed = Math.floor(Math.random() * 1e9);
+  const persona = getRizzPersona(opponent.personaId);
   const control = timeControl && TIME_CONTROLS[timeControl];
 
-  const [state, setState] = createSignal<RizzGameState>(newGame(scenario.id, difficulty));
-  const [items, setItems] = createSignal<BubbleData[]>([]);
+  const [sim, setSim] = createSignal<SimState>(createSimulation(opponent.personaId, opponent.difficulty));
   const [typing, setTyping] = createSignal(false);
-  const [myTurn, setMyTurn] = createSignal(false);
-  const [hint, setHint] = createSignal<number>();
+  const [waiting, setWaiting] = createSignal(false);
+  const [over, setOver] = createSignal<{result: RizzResult, reason: RizzEndReason}>();
   const [clock, setClock] = createSignal(control ? control.base * 1000 : 0);
-  const [turnStartedAt, setTurnStartedAt] = createSignal(0);
+  const [turnStartedAt, setTurnStartedAt] = createSignal(Date.now());
+  const [interestAfter, setInterestAfter] = createSignal<number[]>([]);
+  const [times, setTimes] = createSignal<Map<number, string>>(new Map());
   const [drawOffered, setDrawOffered] = createSignal(false);
-  const [keyboardShown, setKeyboardShown] = createSignal(true);
   const [record, setRecord] = createSignal<RizzGameRecord>();
-  const timers = new Set<number>();
+  let composer: ComposerHandle;
+  let nextId = 1;
   let alive = true;
-
-  const later = (fn: () => void, ms: number) => {
-    const id = window.setTimeout(() => {
-      timers.delete(id);
-      if(alive) fn();
-    }, ms);
-    timers.add(id);
-  };
-
+  const aborts = new Set<AbortController>();
   onCleanup(() => {
     alive = false;
-    timers.forEach((id) => clearTimeout(id));
+    aborts.forEach((controller) => controller.abort());
   });
 
-  const push = (item: BubbleData) => {
-    setItems((list) => [...list, {...item, time: formatTime()}]);
-  };
+  const myTurn = () => !over() && !waiting() && !typing();
 
   const now = createNow(100);
   const remaining = createMemo(() => {
@@ -92,198 +68,207 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     return myTurn() ? clock() - (now() - turnStartedAt()) : clock();
   });
 
-  const startTurn = () => batch(() => {
-    setMyTurn(true);
-    setTurnStartedAt(Date.now());
-  });
+  const updateMessage = (id: number, patch: Partial<SimMessage>) => {
+    setSim((state) => ({...state, messages: state.messages.map((message) => message.id === id ? {...message, ...patch} : message)}));
+  };
 
-  const theyType = (text: string, then: () => void) => {
-    setTyping(true);
-    later(() => {
-      batch(() => {
-        setTyping(false);
-        push({text});
-      });
-      then();
-    }, typingDelay(text));
+  const pushMessage = (message: Omit<SimMessage, 'id'>) => {
+    const id = nextId++;
+    setTimes((map) => new Map(map).set(id, formatTime()));
+    setSim((state) => ({...state, messages: [...state.messages, {...message, id}]}));
+    return id;
+  };
+
+  const finish = (result: RizzResult, reason: RizzEndReason) => {
+    if(over()) return;
+    setOver({result, reason});
+    setTyping(false);
+    setWaiting(false);
+    aborts.forEach((controller) => controller.abort());
+
+    const state = sim();
+    const verdicts = state.messages.filter((message) => message.from === 'me' && message.verdict).map((message) => message.verdict);
+    const rated = !!timeControl;
+    const ratingBefore = rated ? profile.ratings[timeControl] : undefined;
+    const ratingAfter = rated ? updateRating(ratingBefore, opponent.rating, resultScore(result), profile.played[timeControl]) : undefined;
+
+    const game: RizzGameRecord = {
+      id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      date: Date.now(),
+      timeControl,
+      opponent,
+      messages: state.messages.map(({grading, ...message}) => message),
+      interest: interestAfter(),
+      result,
+      reason,
+      ratingBefore,
+      ratingAfter,
+      accuracy: getAccuracy(verdicts),
+      gameRating: getAverageElo(verdicts)
+    };
+    setRecord(game);
+    if(rated) {
+      pushRating(timeControl, ratingAfter);
+      addTrophies(TROPHIES[result]);
+    }
+    saveGame(game);
+
+    setTimeout(() => alive && showGameResult(game, {
+      onReview: () => navigate({name: 'review', gameId: game.id}),
+      onRematch: rematch,
+      onNew: () => navigate(bot ? {name: 'bots'} : {name: 'game', timeControl, key: Date.now()})
+    }), 900);
   };
 
   const rematch = () => navigate({...props.route, key: Date.now()});
 
-  const finish = (final: RizzGameState) => {
-    // * whatever was on its way (their reply to a reply, a draw answer) never comes: the game is over
-    timers.forEach((id) => clearTimeout(id));
-    timers.clear();
-    setTyping(false);
-    setState(final);
-    setMyTurn(false);
-    const summary = summarizeGame(final.moves);
-    const rated = !!timeControl;
-    const ratingBefore = rated ? profile.ratings[timeControl] : undefined;
-    const ratingAfter = rated ?
-      updateRating(ratingBefore, opponent.rating, resultScore(final.result), profile.played[timeControl]) :
-      undefined;
-
-    const game: RizzGameRecord = {
-      id: `${Date.now()}-${seed}`,
-      date: Date.now(),
-      timeControl,
-      opponent,
-      scenarioId: scenario.id,
-      difficulty,
-      seed,
-      moves: final.moves,
-      result: final.result,
-      reason: final.reason,
-      ratingBefore,
-      ratingAfter,
-      accuracy: summary.accuracy,
-      gameRating: summary.gameRating
-    };
-    setRecord(game);
-
-    if(rated) {
-      pushRating(timeControl, ratingAfter);
-      addTrophies(TROPHIES[final.result]);
-    }
-    saveGame(game);
-
-    const reveal = () => showGameResult(game, {
-      onReview: () => navigate({name: 'review', gameId: game.id}),
-      onRematch: rematch,
-      onNew: () => navigate(bot ? {name: 'bots'} : {name: 'game', timeControl, key: Date.now()})
-    });
-
-    const last = endingMessage(final);
-    if(final.reason === 'ghosted' && final.turn < scenario.turns.length) {
-      // * they stop answering mid-game: no typing, a line from the chat itself
-      push({text: `${opponent.name} left you on read`, ghost: true});
-      later(reveal, 900);
-    } else if(last) {
-      theyType(last, () => later(reveal, 700));
-    } else {
-      const line = final.reason === 'timeout' ? 'Time is up — you left them on read' :
-        final.reason === 'agreed' ? 'You agreed to be friends' :
-        'You unmatched';
-      push({text: line, ghost: true});
-      later(reveal, 400);
+  /** Their replies, one after another, each with its typing. */
+  const deliver = async(replies: string[]) => {
+    for(const reply of replies) {
+      setTyping(true);
+      await new Promise((resolve) => setTimeout(resolve, typingDelay(reply)));
+      if(!alive || over()) return;
+      batch(() => {
+        setTyping(false);
+        pushMessage({from: 'them', text: reply});
+      });
     }
   };
 
-  const pick = (optionIndex: number) => {
-    const current = state();
-    if(!myTurn() || current.over) return;
-    const spent = Date.now() - turnStartedAt();
-    const turn = scenario.turns[current.turn];
-    batch(() => {
-      setMyTurn(false);
-      setHint(undefined);
-      if(control) setClock((value) => value - spent + control.increment * 1000);
-      push({text: turn.options[optionIndex].text, out: true});
+  const send = async(text: string) => {
+    if(!myTurn()) return;
+    if(control) setClock((value) => value - (Date.now() - turnStartedAt()) + control.increment * 1000);
+    const id = pushMessage({from: 'me', text, grading: true, verdict: undefined});
+    setWaiting(true);
+    const index = sim().messages.findIndex((message) => message.id === id);
+    const snapshot = sim();
+
+    const gradeAbort = new AbortController();
+    const replyAbort = new AbortController();
+    aborts.add(gradeAbort).add(replyAbort);
+
+    // * the label and their answer are worked out side by side: the badge spins until the classifier has spoken
+    const grading = gradeSimMessage(snapshot, index, gradeAbort.signal).then((verdict) => {
+      if(!alive || !verdict) {
+        updateMessage(id, {grading: false});
+        return;
+      }
+      const {state, delta} = applyVerdict(sim(), verdict);
+      setSim({...state, messages: state.messages.map((message) => message.id === id ? {...message, verdict, delta, grading: false} : message)});
+    }).catch((err) => {
+      if(!gradeAbort.signal.aborted) console.warn('[rizz] grading failed', err);
+      updateMessage(id, {grading: false});
     });
 
-    const next = playMove(current, optionIndex, spent);
-    if(next.over) {
-      later(() => finish(next), 500);
+    try {
+      const answer = await getPersonaReply(snapshot, replyAbort.signal);
+      if(!alive || over()) return;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      setWaiting(false);
+      await deliver(answer.replies);
+      if(!alive || over()) return;
+      setSim((state) => applyInterest(state, answer.interest, answer.status));
+      setInterestAfter((list) => [...list, sim().interest]);
+    } catch(err) {
+      if(replyAbort.signal.aborted) return;
+      setWaiting(false);
+      toast(err instanceof Error && err.message ? err.message : 'They did not answer. Send again.');
+      // the message stays; they simply have not answered it
+    }
+
+    await grading;
+    if(!alive || over()) return;
+
+    const state = sim();
+    if(state.ending) {
+      const {result, reason} = resultOfEnding(state.ending);
+      finish(result, reason);
       return;
     }
 
-    setState(next);
-    later(() => theyType(next.them, startTurn), 400 + Math.random() * 500);
+    if(state.messages.filter((message) => message.from === 'me').length >= SIM_MAX_USER_MESSAGES) {
+      finish('draw', 'friendzone');
+      return;
+    }
+
+    setTurnStartedAt(Date.now());
   };
 
   // * the flag falls: they stopped waiting
   const flagCheck = setInterval(() => {
-    if(control && myTurn() && remaining() <= 0 && !state().over) {
-      finish(endGame(state(), 'loss', 'timeout'));
-    }
+    if(control && myTurn() && remaining() <= 0) finish('loss', 'timeout');
   }, 100);
   onCleanup(() => clearInterval(flagCheck));
 
   const resign = async() => {
-    if(state().over) return;
+    if(over()) return;
     const ok = await confirmAction({
-      title: 'Unmatch?',
+      title: 'Resign?',
       description: timeControl ? 'Resigning counts as a loss and costs rating.' : 'Resigning counts as a loss.',
-      button: 'Unmatch',
+      button: 'Resign',
       danger: true
     });
-    if(ok && !state().over && alive) finish(endGame(state(), 'loss', 'resigned'));
+    if(ok && alive) finish('loss', 'resigned');
   };
 
   const offerDraw = () => {
-    if(state().over || !myTurn() || drawOffered()) return;
+    if(!myTurn() || drawOffered()) return;
     setDrawOffered(true);
-    const accepted = acceptsDraw(state());
-    if(control) setClock(remaining());
-    setMyTurn(false);
-    push({text: 'Honestly I think we\'d be great friends 🙂', out: true});
-    later(() => theyType(accepted ? 'Haha yeah, friends it is! 🤝' : 'Friends? Hm, I wasn\'t thinking friends…', () => {
-      if(accepted) finish(endGame(state(), 'draw', 'agreed'));
-      else startTurn();
-    }), 500);
-  };
-
-  const useHint = () => {
-    if(!bot || !myTurn() || hint() !== undefined) return;
-    const turn = scenario.turns[state().turn];
-    setHint(turn.options.indexOf(bestOption(turn)));
-    setKeyboardShown(true);
-    toast('The engine\'s pick is outlined');
+    // * friendship is an easy yes for someone lukewarm, and a no for someone keen or long gone
+    const interest = sim().interest;
+    const accepted = interest >= 25 && interest <= 65;
+    pushMessage({from: 'me', text: 'Honestly I think we\'d be great friends 🙂'});
+    setWaiting(true);
+    setTimeout(() => {
+      if(!alive || over()) return;
+      setWaiting(false);
+      deliver([accepted ? 'Haha yeah, friends it is! 🤝' : 'Friends? Hm, I wasn\'t thinking friends…']).then(() => {
+        if(accepted) finish('draw', 'agreed');
+      });
+    }, 600);
   };
 
   setLeaveGuard((next) => {
-    if(state().over || !alive) return true;
+    if(over() || !alive || !sim().messages.length) return true;
     confirmAction({
       title: 'Leave the game?',
-      description: 'Leaving now counts as unmatching — a loss.',
+      description: 'Leaving now counts as resigning — a loss.',
       button: 'Leave',
       danger: true
     }).then((ok) => {
       if(!ok || !alive) return;
-      if(!state().over) finish(endGame(state(), 'loss', 'resigned'));
+      finish('loss', 'resigned');
       setLeaveGuard(() => true);
       navigate(next);
     });
     return false;
   });
 
-  onMount(() => {
-    later(() => {
-      if(scenario.opener) theyType(scenario.opener, startTurn);
-      else startTurn();
-    }, 600);
-  });
+  onMount(() => setTurnStartedAt(Date.now()));
 
-  const options = createMemo(() => {
-    const current = state();
-    if(current.over) return [];
-    const turn = scenario.turns[current.turn];
-    return optionOrder(turn, seed + current.turn).map((index) => ({text: turn.options[index].text, index}));
-  });
+  const items = createMemo<BubbleData[]>(() => sim().messages.map((message) => ({
+    text: message.text,
+    out: message.from === 'me',
+    time: times().get(message.id),
+    verdict: message.verdict || (message.grading ? 'pending' : undefined)
+  })));
 
-  const probability = () => winProbability(state().evaluation);
+  const lines = createMemo(() => sim().messages.map((message) => ({mid: message.id, out: message.from === 'me', text: message.text})));
 
   const subtitle = () => {
     if(typing()) return <span class={styles.accent}>typing…</span>;
-    if(state().over) return 'last seen just now';
-    const vibe = profile.settings.vibeBar ? ` · vibe ${Math.round(probability() * 100)}%` : '';
+    if(over()) return 'last seen just now';
+    const vibe = profile.settings.vibeBar ? ` · interest ${sim().interest}` : '';
     return bot ?
       `bot · ${opponent.rating}${vibe}` :
       `${opponent.rating} · ${control.label} ${formatTimeControl(control)}${vibe}`;
-  };
-
-  const status = () => {
-    if(typing()) return `${opponent.name} is typing…`;
-    if(!myTurn()) return 'Waiting…';
-    return keyboardShown() ? 'Choose your reply' : 'Your move';
   };
 
   return (
     <>
       <Topbar
         media={<Avatar name={opponent.name} color={opponent.color} size={42} />}
-        title={<>{opponent.title && <span class={styles.titleChip}>{opponent.title}</span>}{opponent.name}</>}
+        title={opponent.name}
         subtitle={subtitle()}
         right={<Show when={control}>
           <div
@@ -295,39 +280,35 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
           </div>
         </Show>}
         menu={[
-          ...(bot ? [menuItem('lamp', 'Hint', useHint, {verify: () => myTurn() && hint() === undefined})] : []),
+          ...(bot ? [menuItem('lamp', 'Hint', () => composer?.suggest(), {verify: myTurn})] : []),
           ...(bot?.custom ? [menuItem('edit', 'Edit bot', () => navigate({name: 'botMaker', botId: bot.id}))] : []),
-          menuItem('smile', 'Offer friendship', offerDraw, {verify: () => myTurn() && !drawOffered()}),
-          menuItem('flag', 'Unmatch', resign, {danger: true, verify: () => !state().over})
+          menuItem('smile', 'Offer friendship', offerDraw, {verify: () => myTurn() && !drawOffered() && sim().messages.length > 0}),
+          menuItem('flag', 'Resign', resign, {danger: true, verify: () => !over()})
         ]}
       />
       <Show when={profile.settings.vibeBar}>
-        <VibeLine probability={probability()} />
+        <VibeLine probability={sim().interest / 100} />
       </Show>
-      <Messages service={scenario.setting} items={items()} typing={typing()} />
+      <Messages service={`${persona.name} · ${persona.tagline}\nYou open.`} items={items()} typing={typing()} />
       <div class={styles.composer}>
-        <Show when={!state().over} fallback={
+        <Show when={!over()} fallback={
           <ActionPlate
             label="Game Review"
             onClick={() => record() && navigate({name: 'review', gameId: record().id})}
             right={{icon: 'reload_star', label: 'Rematch', onClick: rematch}}
           />
         }>
-          <InputBox
+          <Composer
+            ref={(handle) => composer = handle}
+            placeholder={waiting() ? `${opponent.name} is reading…` : 'Message'}
+            disabled={!myTurn()}
+            lines={lines}
+            ghost={profile.settings.ghost}
+            onSend={send}
             left={<Show when={bot}>
-              <ButtonIconTsx icon="lamp" aria-label="Hint" title="Hint" disabled={!myTurn() || hint() !== undefined} onClick={useHint} />
+              <ButtonIconTsx icon="lamp" aria-label="Hint" title="Hint" disabled={!myTurn()} onClick={() => composer?.suggest()} />
             </Show>}
-            right={<ButtonIconTsx
-              icon={keyboardShown() ? 'down' : 'keyboard'}
-              aria-label={keyboardShown() ? 'Hide replies' : 'Show replies'}
-              onClick={() => setKeyboardShown((value) => !value)}
-            />}
-          >
-            {status()}
-          </InputBox>
-          <Show when={keyboardShown()}>
-            <ReplyKeyboard options={options()} onPick={pick} disabled={!myTurn()} hint={hint()} />
-          </Show>
+          />
         </Show>
       </div>
     </>

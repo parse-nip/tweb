@@ -4,7 +4,6 @@
  */
 
 import {createMemo, createSignal, For, Show} from 'solid-js';
-import {getScenario} from '@components/rizz/engine';
 import {AVATAR_COLORS} from '@components/rizz/content/bots';
 import {navigate} from '@components/rizz/router';
 import {profile, resetProfile, RizzProfile, setProfile, TIME_CONTROLS} from '@components/rizz/store';
@@ -101,7 +100,7 @@ export function ArchiveScreen() {
               <ListRow
                 media={<Avatar name={game.opponent.name} color={game.opponent.color} />}
                 title={`${game.opponent.name} · ${game.result === 'win' ? 'date' : game.result === 'draw' ? 'friendzoned' : 'ghosted'}`}
-                subtitle={`${getScenario(game.scenarioId)?.title} · ${game.timeControl ? TIME_CONTROLS[game.timeControl].label : 'bot'} · ${game.accuracy.toFixed(1)}%`}
+                subtitle={`${game.timeControl ? TIME_CONTROLS[game.timeControl].label : 'bot'} · ${game.messages.filter((message) => message.from === 'me').length} messages · accuracy ${game.accuracy}`}
                 meta={new Date(game.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
                 badge={game.ratingAfter !== undefined && (
                   <span class={styles.rowMeta} classList={{[styles.up]: game.ratingAfter > game.ratingBefore, [styles.down]: game.ratingAfter < game.ratingBefore}}>
@@ -175,10 +174,17 @@ export function SettingsScreen() {
         <Block name="Game">
           <ToggleRow
             icon="like"
-            title="Vibe line"
-            subtitle="Who's winning, under the chat's header"
+            title="Interest line"
+            subtitle="How into you they are, under the chat's header"
             checked={profile.settings.vibeBar}
             onChange={(value) => setProfile('settings', 'vibeBar', value)}
+          />
+          <ToggleRow
+            icon="lamp"
+            title="Ghost text"
+            subtitle="The coach suggests how your message could go on — Tab takes it"
+            checked={profile.settings.ghost}
+            onChange={(value) => setProfile('settings', 'ghost', value)}
           />
           <ToggleRow icon="darkmode" title="Night mode" checked={isNight()} onChange={(value) => setSandboxTheme(value ? 'night' : 'day')} />
         </Block>
