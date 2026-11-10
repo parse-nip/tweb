@@ -14,6 +14,10 @@ export const IS_POPUP_SANDBOX = !!SANDBOX_PARAMS?.has('popups');
 export const IS_WIDGET_SANDBOX = !!SANDBOX_PARAMS?.has('widgets');
 // Either sandbox owns the page: no session, mock managers, nothing on the wire.
 export const IS_SANDBOX_PAGE = IS_POPUP_SANDBOX || IS_WIDGET_SANDBOX;
+// Rizzmate, the game (components/rizz): what every build boots into, on the sandbox's offline environment.
+// `?telegram=1` boots the messenger instead, for working on the Telegram components the game is made of.
+export const IS_RIZZ_GAME = !IS_SANDBOX_PAGE && typeof(location) !== 'undefined' &&
+  !new URLSearchParams(location.search).has('telegram');
 export const DEBUG = (IS_BETA || Modes.debug)/*  && false */;
 const ctx: any = typeof(window) !== 'undefined' ? window : self;
 export const MOUNT_CLASS_TO: any = DEBUG || true/*  && false */ ? ctx : {};

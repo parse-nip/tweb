@@ -258,6 +258,8 @@ function __waitForPreloadedCss(link, dep) {
 }
 
 export default defineConfig({
+  // OPENROUTER_* is read too, so a key exported in the shell (or written as OPENROUTER_API_KEY) reaches the Rizz Coach
+  envPrefix: ['VITE_', 'OPENROUTER_'],
   plugins: [
     // devtools({
     //   /* features options - all disabled by default */
