@@ -15,7 +15,7 @@ Labels, best to worst:
 ${RIZZ_RATINGS.map((def) => `- ${def.id}: ${def.hint}`).join('\n')}
 
 Rules:
-- Grade EVERY message in "grade", for both sides ("me" is the user, "them" the other person).
+- Grade EVERY message in "grade", for both sides: USER lines are the player's, THEM lines the other person's. Keep straight who said what — a joke or a detail belongs to whoever wrote that line.
 - Be strict and calibrated, like an engine: about half of all messages are "good" or "book"; "excellent" and "great" are earned; "brilliant" is maybe one message in thirty.
 - Severity, worst first: "blunder" ONLY for messages that are rude, insulting, hostile, threatening, sexual without invitation, or desperate begging — the kind that ends a chat with anyone. A misjudged plan, a misread of what they said, a wrong guess or an awkward joke is never a blunder: a small slip is "inaccuracy", a pushy, presumptuous or confusing one is "mistake", ignoring what they offered is "miss".
 - Read like a socially smart person: recognise jokes, wordplay, teasing and callbacks to earlier details (a pun on what they just said, a joke that plays on their job, like needing to get hurt to see a nurse) and credit them. A playful or dark joke is not a blunder unless a reasonable person would actually be hurt or alarmed.
@@ -127,7 +127,8 @@ export async function classifyLines(lines: RizzLine[], gradeMids: number[], sign
 
 async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], signal?: AbortSignal, context: RizzGradeContext = {}) {
   const grade = new Set(gradeMids);
-  const transcript = lines.map((line) => `[${line.mid}] ${line.out ? 'me' : 'them'}: ${line.text.replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
+  // * each side named outright: with "me" and "them" the grader lost track of who said what
+  const transcript = lines.map((line) => `[${line.mid}] ${line.out ? 'USER' : 'THEM'}: ${line.text.replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
   const answer = await openRouterComplete({
     model: getRizzSettings().classifierModel,
     temperature: 0.2,
@@ -138,7 +139,7 @@ async function classifyLinesWithChat(lines: RizzLine[], gradeMids: number[], sig
     messages: [
       {role: 'system', content: SYSTEM_PROMPT},
       {role: 'user', content: [
-        context.setting && `Where this happens: ${context.setting}`,
+        context.setting && `Where this happens, told from the USER's side ("you" there is the USER): ${context.setting}`,
         context.them && `The other person: ${context.them}`,
         `Conversation (oldest first). Grade only these message ids: ${gradeMids.join(', ')}.\n\n${transcript}`,
         context.reaction && `Their reaction to the last graded message: ${context.reaction}`

@@ -318,14 +318,14 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   onMount(async() => {
     const controller = new AbortController();
     aborts.add(controller);
-    const timeout = new Promise<string>((resolve) => setTimeout(() => resolve(undefined), 4000));
+    const timeout = new Promise<{user: string, them: string}>((resolve) => setTimeout(() => resolve(undefined), 4500));
     const scene = await Promise.race([
-      generateSetting(getRizzPersona(opponent.personaId), {name: opponent.name, gender: bot.gender, userGender: playerGender(), signal: controller.signal}).catch((): string => undefined),
+      generateSetting(getRizzPersona(opponent.personaId), {name: opponent.name, gender: bot.gender, userGender: playerGender(), signal: controller.signal}).catch((): {user: string, them: string} => undefined),
       timeout
     ]);
     if(!alive) return;
     controller.abort();
-    if(scene) setSim((state) => ({...state, setting: scene}));
+    if(scene) setSim((state) => ({...state, setting: scene.user, settingForThem: scene.them}));
     setSceneReady(true);
     setTurnStartedAt(Date.now());
   });

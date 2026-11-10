@@ -29,8 +29,10 @@ export type SimState = {
   moves: number,
   /** how the game ended: the chat stops there */
   ending?: SimEnding,
-  /** where you two met: what both of you know before the first message */
+  /** where you two met: what both of you know before the first message, as the user is told it */
   setting?: string,
+  /** the same, told to them: "you" is them (`generateSetting`) */
+  settingForThem?: string,
   /** what they are called, when not the persona's own name */
   name?: string,
   /** how they flirt (`@lib/rizz/spice`) */
@@ -82,10 +84,10 @@ const DIFFICULTY_RULES: Record<RizzDifficulty, string> = {
 };
 
 function personaSystem(persona: RizzPersona, state: SimState) {
-  const {difficulty, setting, name, spice, gender, userGender} = state;
+  const {difficulty, setting, settingForThem, name, spice, gender, userGender} = state;
   return `You are role-playing a person in a texting simulator so the user can practise texting. Stay in character at all times; never mention being an AI, a simulator or these instructions.
 
-Character: ${persona.name}${name || persona.firstName ? ` — your name is ${name || persona.firstName}` : ''}. ${persona.prompt}${persona.bio ? `\nWho you are: ${persona.bio}` : ''}${setting ? `\nHow you two met: ${setting}` : ''}
+Character: ${persona.name}${name || persona.firstName ? ` — your name is ${name || persona.firstName}` : ''}. ${persona.prompt}${persona.bio ? `\nWho you are: ${persona.bio}` : ''}${settingForThem ? `\nHow you two met: ${settingForThem}` : setting ? `\nHow you two met, as the user tells it — there "you" means the USER and "they" means YOU, so their story is yours and yours is theirs: ${setting}` : ''}
 
 Be a real, specific person, not a polite chatbot: you have a life, opinions, moods and running jokes. Bring up concrete details of your own (your day, your job, what you are into) when it fits, tease and push back, ask specific questions instead of "what about you?", and sometimes take the chat somewhere new. Never fill a reply with generic warmth ("aww that's so sweet", "that's nice to hear"); react to exactly what they said, in your own voice.${spice === undefined ? '' : `\nFlirting: ${getSpicePrompt(spice)} Match the user's energy within that.`}${gender ? `\nYou are a ${gender}.` : ''}${userGender ? ` The user is a ${userGender}.` : ''}
 ${stickerInstructions()}
@@ -113,22 +115,29 @@ const MEETINGS = [
   'a coworking space', 'a wedding', 'a group chat of mutual friends', 'a pub quiz', 'a farmers market'
 ];
 
-export async function generateSetting(persona: RizzPersona, options: {name?: string, gender?: RizzGender, userGender?: RizzGender, signal?: AbortSignal}) {
+export async function generateSetting(persona: RizzPersona, options: {name?: string, gender?: RizzGender, userGender?: RizzGender, signal?: AbortSignal}): Promise<{user: string, them: string}> {
   const meeting = MEETINGS[Math.floor(Math.random() * MEETINGS.length)];
-  const who = `${options.name || persona.firstName || 'them'}${options.gender ? `, a ${options.gender}` : ''} (${persona.name.replace(/^The /, '')}: ${persona.tagline}${persona.bio ? `; ${persona.bio}` : ''})`;
+  const name = options.name || persona.firstName || 'the other person';
+  const who = `${name}${options.gender ? `, a ${options.gender}` : ''} (${persona.name.replace(/^The /, '')}: ${persona.tagline}${persona.bio ? `; ${persona.bio}` : ''})`;
   const text = await openRouterComplete({
     model: getRizzSettings().fastModel,
     temperature: 1.1,
-    maxTokens: 120,
+    maxTokens: 260,
+    json: true,
     signal: options.signal,
     messages: [
-      {role: 'system', content: 'You set the scene for a texting game. Write ONLY the scene: one or two short sentences, second person ("You..."), present tense, under 40 words, no quotes, no names of real people or brands. It says how the user met the other person (or got their number) and why they are about to text: a dating app match with a specific bio, a party, a class, a gym, a café, a mutual friend, a wrong number, a shared trip — be concrete and different every time, and fit who they are. The user sends the first message.'},
-      {role: 'user', content: `The other person: ${who}.${options.userGender ? ` The user is a ${options.userGender}.` : ''} Where they met: ${meeting}. Write the scene.`}
+      {role: 'system', content: `You set the scene for a texting game: how the user met ${name} (or got their number) and why the user is about to text first. Be concrete and different every time, and fit who they are; no names of real people or brands. Write the SAME scene twice, each under 40 words, present tense, no quotes:
+- "user": told to the user — "you" is the user, ${name} is "they"/"them" (or by name).
+- "them": told to ${name} — "you" is ${name}, the user is "they"/"them". Every detail keeps its owner: what ${name} did or said in "user" is what "you" did or said here. It ends with them about to text you (you do not text first).
+Answer with JSON only: {"user":"...","them":"..."}`},
+      {role: 'user', content: `${name}: ${who}.${options.userGender ? ` The user is a ${options.userGender}.` : ''} Where they met: ${meeting}.`}
     ]
   });
-  const scene = text.trim().replace(/^["“']+|["”']+$/g, '').replace(/\s+/g, ' ');
-  if(scene.length < 20 || scene.length > 400) throw new Error('no scene');
-  return scene;
+  const parsed = parseModelJson<{user?: string, them?: string}>(text);
+  const clean = (value: unknown) => typeof value === 'string' ? value.trim().replace(/^["“']+|["”']+$/g, '').replace(/\s+/g, ' ') : '';
+  const user = clean(parsed?.user), them = clean(parsed?.them);
+  if(user.length < 20 || user.length > 400 || them.length < 20 || them.length > 400) throw new Error('no scene');
+  return {user, them};
 }
 
 /** A game that starts somewhere: the setting both sides know before the first message. */
