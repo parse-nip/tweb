@@ -18,7 +18,8 @@ const RESULT_COPY = {
   agreed: {emoji: '🤝', title: 'Just friends'},
   ghosted: {emoji: '👻', title: 'Ghosted'},
   timeout: {emoji: '⌛', title: 'Left on read'},
-  resigned: {emoji: '🏳️', title: 'You unmatched'}
+  resigned: {emoji: '🏳️', title: 'You resigned'},
+  blunder: {emoji: '💀', title: 'Blundered'}
 };
 
 export function confirmAction(options: {title: string, description: string, button: string, danger?: boolean}) {

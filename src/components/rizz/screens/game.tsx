@@ -68,6 +68,8 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   const [times, setTimes] = createSignal<Map<number, string>>(new Map());
   const [drawOffered, setDrawOffered] = createSignal(false);
   const [record, setRecord] = createSignal<RizzGameRecord>();
+  // * the chat's own last word: "left you on read", "said yes"
+  const [endLine, setEndLine] = createSignal<string>();
   let composer: ComposerHandle;
   let nextId = 1;
   let alive = true;
@@ -172,6 +174,12 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       }
       const {state, delta} = applyVerdict(sim(), verdict);
       setSim({...state, messages: state.messages.map((message) => message.id === id ? {...message, verdict, delta, grading: false} : message)});
+      // * a blunder ends it on the spot: they stop typing and leave you on read — a loss, and the rating with it
+      if(verdict.rating === 'blunder' && !over()) {
+        replyAbort.abort();
+        setEndLine(`${opponent.name} left you on read`);
+        finish('loss', 'blunder');
+      }
     }).catch((err) => {
       if(!gradeAbort.signal.aborted) console.warn('[rizz] grading failed', err);
       updateMessage(id, {grading: false});
@@ -212,6 +220,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     const state = sim();
     if(state.ending) {
       const {result, reason} = resultOfEnding(state.ending);
+      setEndLine(state.ending === 'checkmate' ? `${opponent.name} said yes 💘` : state.ending === 'left-on-read' ? `${opponent.name} left you on read` : undefined);
       finish(result, reason);
       return;
     }
@@ -276,13 +285,13 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
 
   onMount(() => setTurnStartedAt(Date.now()));
 
-  const items = createMemo<BubbleData[]>(() => sim().messages.map((message) => ({
+  const items = createMemo<BubbleData[]>(() => sim().messages.map((message): BubbleData => ({
     text: message.text,
     out: message.from === 'me',
     time: times().get(message.id),
     verdict: message.verdict || (message.grading ? 'pending' : undefined),
     delta: message.delta
-  })));
+  })).concat(endLine() ? [{text: endLine(), ghost: true} as BubbleData] : []));
 
   const lines = createMemo(() => sim().messages.map((message) => ({mid: message.id, out: message.from === 'me', text: message.text})));
 

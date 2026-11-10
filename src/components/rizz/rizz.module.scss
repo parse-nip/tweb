@@ -1083,3 +1083,242 @@
   font-size: .9375rem;
   line-height: 1.4;
 }
+
+// * Home: a wider page, a hero card in Telegram Premium's colours, and the bots and the training as tiles
+.pageWide {
+  max-width: 48rem;
+  padding-inline: 1rem;
+
+  @include respond-to(handhelds) {
+    padding-inline: .5rem;
+  }
+}
+
+.hero {
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  color: #fff;
+  background: linear-gradient(135deg, #6b5cff 0%, #a55eea 55%, #ff6fa8 100%);
+  box-shadow: 0 .5rem 1.5rem rgba(107, 92, 255, .3);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  :global(.is-rtl) & {
+    background: linear-gradient(-135deg, #6b5cff 0%, #a55eea 55%, #ff6fa8 100%);
+  }
+}
+
+.heroTop {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+
+  .avatar {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
+  }
+}
+
+.heroName {
+  font-size: 1.375rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.heroStreak {
+  display: inline-block;
+  margin-top: .25rem;
+  padding: .125rem .5rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, .2);
+  font-size: .8125rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+
+  @include respond-to(handhelds) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.heroStat {
+  padding: .5rem .625rem;
+  border-radius: .75rem;
+  background: rgba(255, 255, 255, .16);
+
+  b {
+    display: block;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    font-size: .75rem;
+    opacity: .85;
+  }
+}
+
+.heroButtons {
+  display: flex;
+  gap: .5rem;
+}
+
+.heroButton {
+  flex: 1 1 0;
+  height: 3rem;
+  border: none;
+  border-radius: .875rem;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  transition: transform .1s, filter .15s;
+  background: #fff;
+  color: #6b5cff;
+
+  &:hover {
+    filter: brightness(.96);
+  }
+
+  &:active {
+    transform: scale(.98);
+  }
+
+  :global(.tgico) {
+    font-size: 1.375rem;
+  }
+}
+
+.heroButtonGlass {
+  background: rgba(255, 255, 255, .2);
+  color: #fff;
+
+  &:hover {
+    filter: none;
+    background: rgba(255, 255, 255, .28);
+  }
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: .5rem .25rem .25rem;
+  font-size: 1.0625rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.sectionLink {
+  border: none;
+  background: none;
+  color: var(--primary-color);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: .5rem;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  padding: 1rem .5rem .875rem;
+  border: none;
+  border-radius: 1rem;
+  background: var(--surface-color);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: var(--section-box-shadow, 0 1px 2px rgba(16, 35, 47, .1));
+  transition: transform .12s, box-shadow .15s;
+
+  &:hover {
+    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
+  }
+
+  &:active {
+    transform: scale(.98);
+  }
+}
+
+.tileWide {
+  flex-direction: row;
+  text-align: start;
+  align-items: center;
+  gap: .75rem;
+  padding: .875rem;
+}
+
+.tileTitle {
+  margin-top: .25rem;
+  font-weight: var(--font-weight-bold);
+  font-size: .9375rem;
+
+  .tileWide & {
+    margin-top: 0;
+  }
+}
+
+.tileSub {
+  font-size: .8125rem;
+  color: var(--secondary-text-color);
+}
+
+.tileRating {
+  margin-top: .25rem;
+  padding: .0625rem .5rem;
+  border-radius: 1rem;
+  background: var(--light-primary-color);
+  color: var(--primary-color);
+  font-size: .75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.tileBadge {
+  position: absolute;
+  top: .5rem;
+  inset-inline-end: .5rem;
+}
+
+.tileNew {
+  border: 2px dashed var(--light-filled-secondary-text-color);
+  background: transparent;
+  box-shadow: none;
+  color: var(--primary-color);
+  justify-content: center;
+}
+
+.tileNewIcon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--light-primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+}
+
+.cardList {
+  border-radius: 1rem;
+  background: var(--surface-color);
+  padding: .375rem .25rem;
+  box-shadow: var(--section-box-shadow, 0 1px 2px rgba(16, 35, 47, .1));
+}

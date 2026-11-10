@@ -4,7 +4,7 @@
  */
 
 import {createMemo, createSignal, For, Show} from 'solid-js';
-import {navigate} from '@components/rizz/router';
+import {navigate, RizzRoute} from '@components/rizz/router';
 import {profile, RizzTimeControl, TIME_CONTROLS} from '@components/rizz/store';
 import {allBots, getBot} from '@components/rizz/world';
 import {dayKey, dailyPuzzle} from '@components/rizz/engine';
@@ -20,51 +20,95 @@ import classNames from '@helpers/string/classNames';
 export function HomeScreen() {
   const solvedToday = () => profile.daily.last === dayKey();
   const daily = dailyPuzzle();
+  const train: {icon: Icon, color: string, title: string, sub: () => string, route: RizzRoute, badge?: () => boolean}[] = [
+    {icon: 'calendar', color: 'orange', title: 'Daily Puzzle', sub: () => solvedToday() ? `Solved · ${profile.daily.streak} day streak` : `${daily.title}`, route: {name: 'daily'}, badge: () => !solvedToday()},
+    {icon: 'lamp', color: 'green', title: 'Puzzles', sub: () => `Rating ${profile.ratings.puzzles}`, route: {name: 'puzzles'}},
+    {icon: 'hourglass', color: 'red', title: 'Puzzle Rush', sub: () => profile.rushBest ? `Best ${profile.rushBest}` : '3 min, 3 strikes', route: {name: 'rush'}},
+    {icon: 'channel', color: 'violet', title: 'Lessons', sub: () => `${profile.lessonsDone.length} of ${LESSONS.length} done`, route: {name: 'lessons'}}
+  ];
+
   return (
     <>
       <Topbar media={<Avatar name={profile.name} color={profile.color} size={42} />} title="Home" subtitle={`${profile.visit.streak} day streak`} />
-      <Page>
-        <div class={styles.hello}>
-          <Avatar name={profile.name} color={profile.color} size={64} />
-          <div>
-            <div class={styles.helloName}>Hi, {profile.name}</div>
-            <div class={styles.caption}>Blitz {profile.ratings.blitz} · Bullet {profile.ratings.bullet} · Rapid {profile.ratings.rapid} · Puzzles {profile.ratings.puzzles}</div>
-          </div>
-        </div>
-        <div class={styles.buttonRow}>
-          <Button primaryFilled class={styles.bigButton} onClick={() => navigate({name: 'play'})}>Play Online</Button>
-          <Button primaryFilled class={styles.bigButton} onClick={() => navigate({name: 'bots'})}>Play Bots</Button>
-        </div>
-        <Block name="Bots">
-          <div class={styles.botStrip}>
-            <For each={allBots()}>{(bot) => (
-              <button type="button" class={styles.botChip} onClick={() => navigate({name: 'bots', botId: bot.id})}>
-                <Avatar name={bot.name} color={bot.color} size={54} />
-                <span class={styles.botChipName}>{bot.name}</span>
-                <span class={styles.botChipRating}>{bot.rating}</span>
+      <div class={styles.page}>
+        <div class={classNames(styles.pageInner, styles.pageWide)}>
+          <div class={styles.hero}>
+            <div class={styles.heroTop}>
+              <Avatar name={profile.name} color={profile.color} size={64} />
+              <div>
+                <div class={styles.heroName}>Hi, {profile.name}</div>
+                <span class={styles.heroStreak}>🔥 {profile.visit.streak} day streak</span>
+              </div>
+            </div>
+            <div class={styles.heroStats}>
+              <div class={styles.heroStat}><b>{profile.ratings.blitz}</b><span>Blitz</span></div>
+              <div class={styles.heroStat}><b>{profile.ratings.bullet}</b><span>Bullet</span></div>
+              <div class={styles.heroStat}><b>{profile.ratings.rapid}</b><span>Rapid</span></div>
+              <div class={styles.heroStat}><b>{profile.ratings.puzzles}</b><span>Puzzles</span></div>
+            </div>
+            <div class={styles.heroButtons}>
+              <button type="button" class={styles.heroButton} onClick={() => navigate({name: 'play'})}>
+                <IconTsx icon="fire" /> Play Online
               </button>
-            )}</For>
+              <button type="button" class={classNames(styles.heroButton, styles.heroButtonGlass)} onClick={() => navigate({name: 'bots'})}>
+                <IconTsx icon="bots" /> Play Bots
+              </button>
+            </div>
           </div>
-        </Block>
-        <Block name="Train">
-          <SettingsRow
-            icon="calendar"
-            title="Daily Puzzle"
-            subtitle={solvedToday() ? `Solved · ${profile.daily.streak} day streak` : `${daily.title} · rated ${daily.rating}`}
-            right={!solvedToday() && <span class={styles.unreadBadge}>1</span>}
-            onClick={() => navigate({name: 'daily'})}
-          />
-          <SettingsRow icon="lamp" title="Puzzles" subtitle={`Rating ${profile.ratings.puzzles}`} onClick={() => navigate({name: 'puzzles'})} />
-          <SettingsRow icon="hourglass" title="Puzzle Rush" subtitle={profile.rushBest ? `Best ${profile.rushBest}` : '3 minutes, 3 strikes'} onClick={() => navigate({name: 'rush'})} />
-          <SettingsRow icon="channel" title="Lessons" subtitle={`${profile.lessonsDone.length} of ${LESSONS.length} done`} onClick={() => navigate({name: 'lessons'})} />
-        </Block>
-        <Show when={profile.games.length}>
-          <Block name="Recent games">
-            <For each={profile.games.slice(0, 3)}>{(game) => <GameRow game={game} small />}</For>
-            <SettingsRow icon="archive" title="All games" onClick={() => navigate({name: 'archive'})} />
-          </Block>
-        </Show>
-      </Page>
+
+          <div>
+            <div class={styles.sectionTitle}>
+              Bots
+              <button type="button" class={styles.sectionLink} onClick={() => navigate({name: 'bots'})}>See all</button>
+            </div>
+            <div class={styles.tiles}>
+              <For each={allBots()}>{(bot) => (
+                <button type="button" class={styles.tile} onClick={() => navigate({name: 'bots', botId: bot.id})}>
+                  <Show when={profile.beatenBots.includes(bot.id)}>
+                    <IconTsx icon="check" class={classNames(styles.check, styles.tileBadge)} />
+                  </Show>
+                  <Avatar name={bot.name} color={bot.color} size={56} />
+                  <span class={styles.tileTitle}>{bot.name}</span>
+                  <span class={styles.tileSub}>{bot.kind || 'Your bot'}</span>
+                  <span class={styles.tileRating}>{bot.rating}</span>
+                </button>
+              )}</For>
+              <button type="button" class={classNames(styles.tile, styles.tileNew)} onClick={() => navigate({name: 'botMaker'})}>
+                <span class={styles.tileNewIcon}><IconTsx icon="add" /></span>
+                <span class={styles.tileTitle}>Create a bot</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class={styles.sectionTitle}>Train</div>
+            <div class={styles.tiles} style={{'grid-template-columns': 'repeat(auto-fill, minmax(14rem, 1fr))'}}>
+              <For each={train}>{(item) => (
+                <button type="button" class={classNames(styles.tile, styles.tileWide)} onClick={() => navigate(item.route)}>
+                  <Avatar icon={item.icon} color={item.color} size={44} />
+                  <span style={{'flex': '1 1 auto', 'min-width': '0'}}>
+                    <span class={styles.tileTitle} style={{display: 'block'}}>{item.title}</span>
+                    <span class={styles.tileSub}>{item.sub()}</span>
+                  </span>
+                  <Show when={item.badge?.()}><span class={styles.unreadBadge}>1</span></Show>
+                </button>
+              )}</For>
+            </div>
+          </div>
+
+          <Show when={profile.games.length}>
+            <div>
+              <div class={styles.sectionTitle}>
+                Recent games
+                <button type="button" class={styles.sectionLink} onClick={() => navigate({name: 'archive'})}>All games</button>
+              </div>
+              <div class={styles.cardList}>
+                <For each={profile.games.slice(0, 4)}>{(game) => <GameRow game={game} small />}</For>
+              </div>
+            </div>
+          </Show>
+        </div>
+      </div>
     </>
   );
 }

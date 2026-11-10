@@ -14,6 +14,7 @@
   align-items: center;
   height: 1.5rem;
   border-radius: .75rem;
+  align-items: center;
   cursor: pointer;
   user-select: none;
   pointer-events: auto;
@@ -99,10 +100,14 @@
     .label {
       max-width: 14rem;
       opacity: 1;
-      padding-inline: .125rem .625rem;
+      padding-inline: .25rem .625rem;
     }
 
+    // * smaller inside the pill than on its own, with room to breathe at the pill's end
     .ball {
+      width: 1.125rem;
+      height: 1.1875rem;
+      margin-inline: .1875rem .0625rem;
       transform: rotate(360deg);
     }
   }
@@ -111,10 +116,11 @@
   &.isIn:focus-visible,
   &.isIn.isOpen {
     .label {
-      padding-inline: .625rem .125rem;
+      padding-inline: .625rem .25rem;
     }
 
     .ball {
+      margin-inline: .0625rem .1875rem;
       transform: rotate(-360deg);
     }
   }

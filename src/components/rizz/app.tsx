@@ -83,16 +83,14 @@ export default function RizzApp() {
         text: 'play online rated bullet blitz rapid',
         media: <Avatar icon="fire" color="blue" />,
         title: 'Play Online',
-        subtitle: `Rated · Blitz ${profile.ratings.blitz}`,
-        pinned: true
+        subtitle: `Rated · Blitz ${profile.ratings.blitz}`
       }, {
         key: 'bots',
         route: {name: 'bots'},
         text: 'play bots ' + bots.map((bot) => bot.name.toLowerCase()).join(' '),
         media: <Avatar icon="bots" color="green" />,
         title: 'Play Bots',
-        subtitle: `${bots.length} bots · ${profile.beatenBots.length} beaten`,
-        pinned: true
+        subtitle: `${bots.length} bots · ${profile.beatenBots.length} beaten`
       }]
     }, {
       label: 'Train',

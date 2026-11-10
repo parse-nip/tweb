@@ -25,10 +25,10 @@ function when(date: number) {
 
 export function ResultGlyph(props: {game: RizzGameRecord}) {
   return (
-    <span class={styles.resultGlyph} title={props.game.result === 'win' ? 'A date' : props.game.result === 'draw' ? 'Draw' : 'Lost'}>
+    <span class={styles.resultGlyph} title={props.game.result === 'win' ? 'A date' : props.game.result === 'draw' ? 'Draw' : props.game.reason === 'blunder' ? 'Blundered' : 'Lost'}>
       <Show when={props.game.result !== 'draw'} fallback={<span class={styles.rowMeta}>½</span>}>
         <Glyph
-          verdict={props.game.reason === 'resigned' ? 'resign' : 'checkmate'}
+          verdict={props.game.reason === 'resigned' ? 'resign' : props.game.reason === 'blunder' ? 'blunder' : 'checkmate'}
           dark={props.game.result === 'loss'}
           size={20}
         />

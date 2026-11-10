@@ -9,7 +9,7 @@ import type {SimEnding} from '@lib/rizz/simulator';
 import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
 
 export type RizzResult = 'win' | 'draw' | 'loss';
-export type RizzEndReason = 'date' | 'friendzone' | 'ghosted' | 'timeout' | 'resigned' | 'agreed';
+export type RizzEndReason = 'date' | 'friendzone' | 'ghosted' | 'timeout' | 'resigned' | 'agreed' | 'blunder';
 
 /** How the simulator's ending reads as a game result. */
 export function resultOfEnding(ending: SimEnding): {result: RizzResult, reason: RizzEndReason} {
