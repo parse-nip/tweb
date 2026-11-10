@@ -28,6 +28,8 @@ export default function Composer(props: {
   /** the conversation the suggestion continues */
   lines: () => RizzLine[],
   ghost?: boolean,
+  /** how spicy the suggestions may be */
+  spice?: number,
   onSend: (text: string) => void,
   left?: JSX.Element,
   right?: JSX.Element,
@@ -51,7 +53,7 @@ export default function Composer(props: {
   };
 
   const ask = async(force?: boolean) => {
-    if(props.disabled || (!props.ghost && !force)) return;
+    if(props.disabled || !props.ghost) return;
     const text = draft();
     const lines = props.lines();
     if(text.trim()) {
@@ -66,7 +68,7 @@ export default function Composer(props: {
     const controller = abort = new AbortController();
     setThinking(true);
     try {
-      const suggestion = await getRizzSuggestion({lines, draft: text, signal: controller.signal});
+      const suggestion = await getRizzSuggestion({lines, draft: text, spice: props.spice, signal: controller.signal});
       // the text moved on while the model was thinking
       if(controller.signal.aborted || draft() !== text || !suggestion) return;
       setGhost(suggestion);

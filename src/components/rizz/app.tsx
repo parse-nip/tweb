@@ -14,7 +14,9 @@ import LESSONS from '@components/rizz/content/lessons';
 import {dayKey} from '@components/rizz/engine';
 import {navigate, route, RizzRoute} from '@components/rizz/router';
 import {profile, touchVisit} from '@components/rizz/store';
-import {allBots, DIVISIONS, leagueTable, settleLeague, syncCustomPersonas} from '@components/rizz/world';
+import {allBots, syncCustomPersonas} from '@components/rizz/world';
+
+const QUICK_GAME = 'quick';
 import {Avatar, ListRow, menuItem, styles} from '@components/rizz/ui';
 import GameRow from '@components/rizz/gameRow';
 import {setSandboxTheme} from '@components/popupSandbox/environment';
@@ -23,9 +25,8 @@ import GameScreen from '@components/rizz/screens/game';
 import ReviewScreen from '@components/rizz/screens/review';
 import {DailyScreen, PuzzlesScreen, RushScreen} from '@components/rizz/screens/puzzles';
 import {LessonScreen, LessonsScreen} from '@components/rizz/screens/learn';
-import {LeaderboardScreen, LeaguesScreen} from '@components/rizz/screens/social';
 import {ArchiveScreen, ProfileScreen, SettingsScreen} from '@components/rizz/screens/profile';
-import {BotsScreen, HomeScreen, PlayScreen} from '@components/rizz/screens/play';
+import {BotsScreen, HomeScreen} from '@components/rizz/screens/play';
 import BotMakerScreen from '@components/rizz/screens/botMaker';
 
 type Entry = {
@@ -47,8 +48,7 @@ function isActive(entry: Entry) {
   const current = route();
   if(current.name === 'game' && entry.route.name === 'game') return current.botId === entry.route.botId;
   if(current.name === entry.route.name) return true;
-  if(entry.route.name === 'play' && current.name === 'game' && !current.botId) return true;
-  if(entry.route.name === 'bots' && ((current.name === 'game' && current.botId) || current.name === 'botMaker')) return true;
+  if(entry.route.name === 'bots' && ((current.name === 'game' && current.botId !== QUICK_GAME) || current.name === 'botMaker')) return true;
   if(entry.route.name === 'lessons' && current.name === 'lesson') return true;
   return false;
 }
@@ -61,9 +61,8 @@ function isNight() {
 export default function RizzApp() {
   const [query, setQuery] = createSignal('');
 
-  // * a visit counts for the streak; a new week settles last week's league
+  // * a visit counts for the streak
   touchVisit();
-  settleLeague();
   // * the player's own bots are personas the simulator can play
   syncCustomPersonas();
 
@@ -71,26 +70,26 @@ export default function RizzApp() {
 
   const sections = createMemo<Section[]>(() => {
     const dailyDone = profile.daily.last === dayKey();
-    const division = DIVISIONS[profile.league.division];
-    const leagueRank = leagueTable().findIndex((entry) => entry.me) + 1;
     const bots = allBots();
 
     return [{
       label: 'Play',
       entries: [{
-        key: 'play',
-        route: {name: 'play'},
-        text: 'play online rated bullet blitz rapid',
-        media: <Avatar icon="fire" color="blue" />,
-        title: 'Play Online',
-        subtitle: `Rated · Blitz ${profile.ratings.blitz}`
-      }, {
         key: 'bots',
         route: {name: 'bots'},
         text: 'play bots ' + bots.map((bot) => bot.name.toLowerCase()).join(' '),
         media: <Avatar icon="bots" color="green" />,
-        title: 'Play Bots',
-        subtitle: `${bots.length} bots · ${profile.beatenBots.length} beaten`
+        title: 'Play',
+        subtitle: `${bots.length} bots · ${profile.beatenBots.length} beaten`,
+        meta: String(profile.ratings.rizz)
+      }, {
+        key: 'quick',
+        // * a bot that is not there makes the game pick one near the player's rating (`quickBot`)
+        route: {name: 'game', botId: QUICK_GAME, key: 0},
+        text: 'quick game random',
+        media: <Avatar icon="fire" color="orange" />,
+        title: 'Quick game',
+        subtitle: 'A bot near your rating, right now'
       }]
     }, {
       label: 'Train',
@@ -125,23 +124,6 @@ export default function RizzApp() {
         title: 'Lessons',
         subtitle: `Coach Rizzo · ${profile.lessonsDone.length} of ${LESSONS.length} done`
       }]
-    }, {
-      label: 'Compete',
-      entries: [{
-        key: 'leagues',
-        route: {name: 'leagues'},
-        text: 'leagues trophies ' + division.name.toLowerCase(),
-        media: <Avatar icon="crown" color="stars" />,
-        title: `${division.name} League`,
-        subtitle: `#${leagueRank} this week · ${profile.league.trophies} trophies`
-      }, {
-        key: 'leaderboard',
-        route: {name: 'leaderboard'},
-        text: 'leaderboard top',
-        media: <Avatar icon="poll" color="cyan" />,
-        title: 'Leaderboard',
-        subtitle: 'The world\'s best rizzers'
-      }]
     }];
   });
 
@@ -155,7 +137,10 @@ export default function RizzApp() {
     return {entries, bots, games};
   });
 
-  const open = (entry: Entry) => navigate(entry.route);
+  const open = (entry: Entry) => navigate(entry.route.name === 'game' ? {...entry.route, key: Date.now()} : entry.route);
+
+  /** A game with a bot near the player's rating, at once. */
+  const quickGame = () => navigate({name: 'game', botId: QUICK_GAME, key: Date.now()});
   const activeGameId = () => {
     const current = route();
     return current.name === 'review' ? current.gameId : undefined;
@@ -194,6 +179,14 @@ export default function RizzApp() {
         </div>
         <div class={styles.list}>
           <Show when={searchResults()} fallback={<>
+            <ListRow
+              media={<Avatar name={profile.name} color={profile.color} />}
+              title={profile.name}
+              subtitle={`Rating ${profile.ratings.rizz} · Puzzles ${profile.ratings.puzzles}`}
+              meta={`🔥 ${profile.visit.streak}`}
+              active={route().name === 'profile'}
+              onClick={() => navigate({name: 'profile'})}
+            />
             <For each={sections()}>{(section) => <>
               <div class={styles.listLabel}>{section.label}</div>
               <For each={section.entries}>{renderEntry}</For>
@@ -229,7 +222,7 @@ export default function RizzApp() {
           icon="newchat_filled"
           direction="top-left"
           buttons={[
-            menuItem('fire', 'Quick game · Blitz', () => navigate({name: 'game', timeControl: 'blitz', key: Date.now()})),
+            menuItem('fire', 'Quick game', quickGame),
             menuItem('bots', 'Play a bot', () => navigate({name: 'bots'})),
             menuItem('add', 'Create a bot', () => navigate({name: 'botMaker'}))
           ]}
@@ -238,7 +231,6 @@ export default function RizzApp() {
       <main class={styles.center}>
         <Switch>
           <Match when={route().name === 'home'}><HomeScreen /></Match>
-          <Match when={route().name === 'play'}><PlayScreen /></Match>
           <Match when={route().name === 'bots' && route() as Extract<RizzRoute, {name: 'bots'}>} keyed>
             {(current) => <BotsScreen botId={current.botId} />}
           </Match>
@@ -258,8 +250,6 @@ export default function RizzApp() {
           <Match when={route().name === 'lesson' && route() as Extract<RizzRoute, {name: 'lesson'}>} keyed>
             {(current) => <LessonScreen lessonId={current.lessonId} />}
           </Match>
-          <Match when={route().name === 'leaderboard'}><LeaderboardScreen /></Match>
-          <Match when={route().name === 'leagues'}><LeaguesScreen /></Match>
           <Match when={route().name === 'profile'}><ProfileScreen /></Match>
           <Match when={route().name === 'archive'}><ArchiveScreen /></Match>
           <Match when={route().name === 'settings'}><SettingsScreen /></Match>

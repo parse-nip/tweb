@@ -15,6 +15,7 @@ import {
   ActionPlate, Avatar, BubbleData, Glyph, Graph, Messages, PinnedBar, signed, styles, Topbar, VibeLine
 } from '@components/rizz/ui';
 import Composer from '@components/rizz/composer';
+import Notation from '@components/rizz/notation';
 import {ButtonIconTsx} from '@components/buttonIconTsx';
 
 export default function ReviewScreen(props: {gameId: string}) {
@@ -28,6 +29,7 @@ export default function ReviewScreen(props: {gameId: string}) {
   // * retrying the selected message: undefined — not retrying, null — writing, else the new one's verdict
   const [retry, setRetry] = createSignal<{text?: string, verdict?: RizzVerdict, grading?: boolean} | null>();
   const [feedback, setFeedback] = createSignal(game.coachReview);
+  const [showMoves, setShowMoves] = createSignal(window.innerWidth > 1100);
 
   const items = createMemo<BubbleData[]>(() => game.messages.map((message) => ({
     text: message.text,
@@ -104,7 +106,10 @@ export default function ReviewScreen(props: {gameId: string}) {
         title={`Game Review · ${game.opponent.name}`}
         subtitle={`${game.result === 'win' ? 'checkmate' : game.result === 'draw' ? 'draw' : 'lost'} · message ${selected() + 1} of ${mine.length}`}
         onBack={() => navigate({name: 'archive'})}
+        right={<ButtonIconTsx icon="list" aria-label="Moves" aria-pressed={showMoves()} onClick={() => setShowMoves((value) => !value)} />}
       />
+      <div class={styles.chatRow}>
+      <div class={styles.chatBody}>
       <VibeLine probability={interest() / 100} />
       <Show when={message()}>
         <Show when={retry() === undefined} fallback={
@@ -177,12 +182,18 @@ export default function ReviewScreen(props: {gameId: string}) {
               placeholder="Write it again…"
               lines={linesBefore}
               ghost={profile.settings.ghost}
+              spice={profile.settings.ghostSpice}
               disabled={retry()?.grading}
               onSend={gradeRetry}
               right={<ButtonIconTsx icon="close" aria-label="Back to the review" onClick={() => setRetry(undefined)} />}
             />
           </Show>
         </Show>
+      </div>
+      </div>
+      <Show when={showMoves()}>
+        <Notation messages={game.messages} selected={selected()} onPick={select} onClose={() => setShowMoves(false)} />
+      </Show>
       </div>
     </>
   );

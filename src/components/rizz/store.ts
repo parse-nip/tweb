@@ -34,7 +34,7 @@ export type RizzOpponent = {
 export type RizzGameRecord = {
   id: string,
   date: number,
-  /** Rated games are online ones with a clock; bot games are unrated, as on chess.com. */
+  /** the clock the game was played on, when it had one */
   timeControl?: RizzTimeControl,
   opponent: RizzOpponent,
   /** the whole chat, the classifier's verdict on each of the player's messages */
@@ -55,9 +55,10 @@ export type RizzGameRecord = {
 export type RizzProfile = {
   name: string,
   color: RizzAvatarColor,
-  ratings: {[key in RizzTimeControl | 'puzzles']: number},
-  ratingHistory: {[key in RizzTimeControl | 'puzzles']: number[]},
-  played: {[key in RizzTimeControl | 'puzzles']: number},
+  /** every game is against a bot and rated; puzzles have their own */
+  ratings: {[key in RizzRatingKind]: number},
+  ratingHistory: {[key in RizzRatingKind]: number[]},
+  played: {[key in RizzRatingKind]: number},
   games: RizzGameRecord[],
   puzzlesSolved: string[],
   puzzleStreak: number,
@@ -66,32 +67,25 @@ export type RizzProfile = {
   visit: {last: string, streak: number},
   lessonsDone: string[],
   beatenBots: string[],
-  league: {week: string, division: number, trophies: number, lastResult?: 'promoted' | 'demoted' | 'stayed'},
-  settings: {vibeBar: boolean, ghost: boolean},
+  /** ghost text is off until switched on; the spice of the suggestions and of the bots is `@lib/rizz/spice`'s */
+  settings: {vibeBar: boolean, ghost: boolean, ghostSpice: number, botSpice: number},
   customBots: RizzBot[]
 };
 
-// v2: games hold the Rizz Coach's chat and verdicts
-const STORAGE_KEY = 'rizz-profile-v2';
-const MAX_GAMES = 100;
+// v3: one rating for games (they are all against bots); v2's games carry over
+const STORAGE_KEY = 'rizz-profile-v3';
+const PREVIOUS_KEY = 'rizz-profile-v2';
 
-export function weekKey(date = new Date()) {
-  // ISO week: the Thursday of this week decides the year
-  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = target.getUTCDay() || 7;
-  target.setUTCDate(target.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `${target.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
-}
+export type RizzRatingKind = 'rizz' | 'puzzles';
+const MAX_GAMES = 100;
 
 export function defaultProfile(): RizzProfile {
   return {
     name: 'You',
     color: 'blue',
-    ratings: {bullet: 800, blitz: 800, rapid: 800, puzzles: 800},
-    ratingHistory: {bullet: [800], blitz: [800], rapid: [800], puzzles: [800]},
-    played: {bullet: 0, blitz: 0, rapid: 0, puzzles: 0},
+    ratings: {rizz: 800, puzzles: 800},
+    ratingHistory: {rizz: [800], puzzles: [800]},
+    played: {rizz: 0, puzzles: 0},
     games: [],
     puzzlesSolved: [],
     puzzleStreak: 0,
@@ -100,8 +94,7 @@ export function defaultProfile(): RizzProfile {
     visit: {last: '', streak: 0},
     lessonsDone: [],
     beatenBots: [],
-    league: {week: weekKey(), division: 0, trophies: 0},
-    settings: {vibeBar: true, ghost: true},
+    settings: {vibeBar: true, ghost: false, ghostSpice: 1, botSpice: 1},
     customBots: []
   };
 }
@@ -110,8 +103,20 @@ function readProfile(): RizzProfile {
   const fresh = defaultProfile();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return fresh;
-    const stored = JSON.parse(raw);
+    const previous = !raw && localStorage.getItem(PREVIOUS_KEY);
+    if(!raw && !previous) return fresh;
+    const stored = JSON.parse(raw || previous);
+    if(previous) {
+      // * the three clocks' ratings become the one rating: the best of them
+      const best = (values: number[]) => Math.max(...values.filter((value) => typeof(value) === 'number'), fresh.ratings.rizz);
+      const old = stored.ratings || {};
+      stored.ratings = {rizz: best([old.bullet, old.blitz, old.rapid]), puzzles: old.puzzles ?? fresh.ratings.puzzles};
+      stored.ratingHistory = {rizz: [stored.ratings.rizz], puzzles: stored.ratingHistory?.puzzles || [stored.ratings.puzzles]};
+      stored.played = {rizz: (stored.played?.bullet || 0) + (stored.played?.blitz || 0) + (stored.played?.rapid || 0), puzzles: stored.played?.puzzles || 0};
+      delete stored.league;
+      // * ghost text was on by default before: it is the player's to switch on
+      if(stored.settings) stored.settings.ghost = false;
+    }
     // shallow-merge so a field added later gets its default
     return {
       ...fresh,
@@ -119,8 +124,7 @@ function readProfile(): RizzProfile {
       ratings: {...fresh.ratings, ...stored.ratings},
       ratingHistory: {...fresh.ratingHistory, ...stored.ratingHistory},
       played: {...fresh.played, ...stored.played},
-      settings: {...fresh.settings, ...stored.settings},
-      league: {...fresh.league, ...stored.league}
+      settings: {...fresh.settings, ...stored.settings}
     };
   } catch(err) {
     return fresh;

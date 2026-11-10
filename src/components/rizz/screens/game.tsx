@@ -8,19 +8,20 @@
 import {batch, createMemo, createSignal, onCleanup, onMount, Show} from 'solid-js';
 import {getScenarios, resultOfEnding, resultScore, RizzEndReason, RizzResult, updateRating} from '@components/rizz/engine';
 import {
-  applyInterest, applyVerdict, createSimulationAt, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SIM_WIN_INTEREST, SimMessage,
+  applyInterest, applyVerdict, confirmTheirYes, createSimulationAt, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SimMessage,
   SimState, SimStatus
 } from '@lib/rizz/simulator';
 import type {RizzDifficulty} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo} from '@lib/rizz/ratings';
 import {navigate, RizzRoute, setLeaveGuard} from '@components/rizz/router';
 import {profile, pushRating, RizzGameRecord, RizzOpponent, RizzTimeControl, saveGame, TIME_CONTROLS} from '@components/rizz/store';
-import {addTrophies, findOpponent, getBot, TROPHIES} from '@components/rizz/world';
+import {botRating, getBot, quickBot} from '@components/rizz/world';
 import {
   ActionPlate, Avatar, BubbleData, createNow, formatClock, formatTime, formatTimeControl, menuItem, Messages, styles,
   Topbar, VibeLine
 } from '@components/rizz/ui';
 import Composer, {ComposerHandle} from '@components/rizz/composer';
+import Notation from '@components/rizz/notation';
 import {ButtonIconTsx} from '@components/buttonIconTsx';
 import {confirmAction, showGameResult} from '@components/rizz/popups';
 import {toast} from '@components/toast';
@@ -50,15 +51,23 @@ function pickSetting() {
 }
 
 export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'game'}>}) {
-  const bot = props.route.botId ? getBot(props.route.botId) : undefined;
-  const timeControl: RizzTimeControl = bot ? undefined : props.route.timeControl || 'blitz';
-  const opponent: RizzOpponent = bot ?
-    {id: bot.id, name: bot.name, rating: bot.rating, color: bot.color, bot: true, personaId: bot.id, difficulty: props.route.difficulty || BOT_DIFFICULTY} :
-    findOpponent(timeControl);
+  // * every game is against a bot (a deleted one makes way for a quick pick), rated against its strength
+  const picked = getBot(props.route.botId) ? {bot: getBot(props.route.botId), difficulty: props.route.difficulty || BOT_DIFFICULTY} : quickBot();
+  const bot = picked.bot;
+  const timeControl: RizzTimeControl = props.route.timeControl;
+  const opponent: RizzOpponent = {
+    id: bot.id,
+    name: bot.name,
+    rating: botRating(bot, picked.difficulty),
+    color: bot.color,
+    bot: true,
+    personaId: bot.id,
+    difficulty: picked.difficulty
+  };
   const control = timeControl && TIME_CONTROLS[timeControl];
 
   const setting = pickSetting();
-  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, opponent.name));
+  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, opponent.name, profile.settings.botSpice));
   const [typing, setTyping] = createSignal(false);
   const [waiting, setWaiting] = createSignal(false);
   const [over, setOver] = createSignal<{result: RizzResult, reason: RizzEndReason}>();
@@ -70,6 +79,9 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   const [record, setRecord] = createSignal<RizzGameRecord>();
   // * the chat's own last word: "left you on read", "said yes"
   const [endLine, setEndLine] = createSignal<string>();
+  // * the move list beside the chat: open from the start on a wide screen, as chess.com shows it
+  const [showMoves, setShowMoves] = createSignal(window.innerWidth > 1100);
+  let scrollEl: HTMLDivElement;
   let composer: ComposerHandle;
   let nextId = 1;
   let alive = true;
@@ -107,9 +119,8 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
 
     const state = sim();
     const verdicts = state.messages.filter((message) => message.from === 'me' && message.verdict).map((message) => message.verdict);
-    const rated = !!timeControl;
-    const ratingBefore = rated ? profile.ratings[timeControl] : undefined;
-    const ratingAfter = rated ? updateRating(ratingBefore, opponent.rating, resultScore(result), profile.played[timeControl]) : undefined;
+    const ratingBefore = profile.ratings.rizz;
+    const ratingAfter = updateRating(ratingBefore, opponent.rating, resultScore(result), profile.played.rizz);
 
     const game: RizzGameRecord = {
       id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -126,16 +137,13 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       gameRating: getAverageElo(verdicts)
     };
     setRecord(game);
-    if(rated) {
-      pushRating(timeControl, ratingAfter);
-      addTrophies(TROPHIES[result]);
-    }
+    pushRating('rizz', ratingAfter);
     saveGame(game);
 
     setTimeout(() => alive && showGameResult(game, {
       onReview: () => navigate({name: 'review', gameId: game.id}),
       onRematch: rematch,
-      onNew: () => navigate(bot ? {name: 'bots'} : {name: 'game', timeControl, key: Date.now()})
+      onNew: () => navigate({name: 'bots'})
     }), 900);
   };
 
@@ -188,13 +196,16 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     let status: SimStatus;
     try {
       const answer = await getPersonaReply(snapshot, replyAbort.signal);
-      status = answer.status;
+      // * the persona claims a yes too readily: the classifier checks their words before it counts
+      status = answer.status === 'won' && !(await confirmTheirYes(snapshot, answer.replies, replyAbort.signal).catch(() => false)) ?
+        'continue' :
+        answer.status;
       if(!alive || over()) return;
       await new Promise((resolve) => setTimeout(resolve, 300));
       setWaiting(false);
       await deliver(answer.replies);
       if(!alive || over()) return;
-      setSim((state) => applyInterest(state, answer.interest, answer.status));
+      setSim((state) => applyInterest(state, answer.interest, status));
       setInterestAfter((list) => [...list, sim().interest]);
     } catch(err) {
       if(replyAbort.signal.aborted) return;
@@ -206,8 +217,9 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     await grading;
     if(!alive || over()) return;
 
-    // * a checkmate is theirs to give: a date the player declared and they never said yes to is presumptuous, not a win
-    if(sim().ending === 'checkmate' && status !== 'won' && sim().interest < SIM_WIN_INTEREST) {
+    // * a checkmate is theirs to give, in so many words: high interest only means they are keen (ask them out), and a
+    // * date the player declared that they never said yes to is presumptuous, not a win
+    if(sim().ending === 'checkmate' && status !== 'won') {
       setSim((state): SimState => ({
         ...state,
         ending: undefined,
@@ -243,7 +255,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     if(over()) return;
     const ok = await confirmAction({
       title: 'Resign?',
-      description: timeControl ? 'Resigning counts as a loss and costs rating.' : 'Resigning counts as a loss.',
+      description: 'Resigning counts as a loss and costs rating.',
       button: 'Resign',
       danger: true
     });
@@ -299,9 +311,8 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     if(typing()) return <span class={styles.accent}>typing…</span>;
     if(over()) return 'last seen just now';
     const vibe = profile.settings.vibeBar ? ` · interest ${sim().interest}` : '';
-    return bot ?
-      `bot · ${opponent.rating}${vibe}` :
-      `${opponent.rating} · ${control.label} ${formatTimeControl(control)}${vibe}`;
+    const clock = control ? ` · ${control.label} ${formatTimeControl(control)}` : '';
+    return `${bot.kind || 'your bot'} · ${opponent.rating}${clock}${vibe}`;
   };
 
   return (
@@ -310,7 +321,9 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
         media={<Avatar name={opponent.name} color={opponent.color} size={42} />}
         title={opponent.name}
         subtitle={subtitle()}
-        right={<Show when={control}>
+        right={<>
+          <ButtonIconTsx icon="list" aria-label="Moves" aria-pressed={showMoves()} onClick={() => setShowMoves((value) => !value)} />
+          <Show when={control}>
           <div
             class={classNames(styles.clock, myTurn() && styles.running, myTurn() && remaining() < 10000 && styles.low)}
             role="timer"
@@ -318,18 +331,21 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
           >
             {formatClock(remaining())}
           </div>
-        </Show>}
+        </Show>
+        </>}
         menu={[
-          ...(bot ? [menuItem('lamp', 'Hint', () => composer?.suggest(), {verify: myTurn})] : []),
-          ...(bot?.custom ? [menuItem('edit', 'Edit bot', () => navigate({name: 'botMaker', botId: bot.id}))] : []),
+          menuItem('lamp', 'Hint', () => composer?.suggest(), {verify: () => myTurn() && profile.settings.ghost}),
+          ...(bot.custom ? [menuItem('edit', 'Edit bot', () => navigate({name: 'botMaker', botId: bot.id}))] : []),
           menuItem('smile', 'Offer friendship', offerDraw, {verify: () => myTurn() && !drawOffered() && sim().messages.length > 0}),
           menuItem('flag', 'Resign', resign, {danger: true, verify: () => !over()})
         ]}
       />
+      <div class={styles.chatRow}>
+      <div class={styles.chatBody}>
       <Show when={profile.settings.vibeBar}>
         <VibeLine probability={sim().interest / 100} />
       </Show>
-      <Messages service={`${setting}\nYou open.`} items={items()} typing={typing()} />
+      <Messages ref={(el) => scrollEl = el} service={`${setting}\nYou open.`} items={items()} typing={typing()} />
       <div class={styles.composer}>
         <Show when={!over()} fallback={
           <ActionPlate
@@ -344,12 +360,22 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
             disabled={!myTurn()}
             lines={lines}
             ghost={profile.settings.ghost}
+            spice={profile.settings.ghostSpice}
             onSend={send}
-            left={<Show when={bot}>
+            left={<Show when={profile.settings.ghost}>
               <ButtonIconTsx icon="lamp" aria-label="Hint" title="Hint" disabled={!myTurn()} onClick={() => composer?.suggest()} />
             </Show>}
           />
         </Show>
+      </div>
+      </div>
+      <Show when={showMoves()}>
+        <Notation
+          messages={sim().messages}
+          onPick={(move) => scrollEl?.querySelectorAll<HTMLElement>(`.${styles.out}`)[move]?.scrollIntoView({block: 'center', behavior: 'smooth'})}
+          onClose={() => setShowMoves(false)}
+        />
+      </Show>
       </div>
     </>
   );

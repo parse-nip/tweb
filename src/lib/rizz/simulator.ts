@@ -1,9 +1,10 @@
-import {classifyLines} from '@lib/rizz/classifier';
-import {openRouterComplete, parseModelJson} from '@lib/rizz/openrouter';
+import {classifyLines, isDecisionsModel} from '@lib/rizz/classifier';
+import {openRouterComplete, openRouterDecide, parseModelJson} from '@lib/rizz/openrouter';
 import {PLAYER_START_ELO, updateElo} from '@lib/rizz/elo';
 import {getRizzPersona, RIZZ_DIFFICULTIES, RizzDifficulty, RizzPersona} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo, getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
 import {getRizzSettings} from '@lib/rizz/settings';
+import {getSpicePrompt} from '@lib/rizz/spice';
 
 export type SimMessage = {
   id: number,
@@ -30,7 +31,9 @@ export type SimState = {
   /** where you two met: what both of you know before the first message */
   setting?: string,
   /** what they are called, when not the persona's own name */
-  name?: string
+  name?: string,
+  /** how they flirt (`@lib/rizz/spice`) */
+  spice?: number
 };
 
 /** checkmate: the date is won (the white badge). resign: the user gave up. left-on-read: they won (the black checkmate). */
@@ -72,15 +75,15 @@ const DIFFICULTY_RULES: Record<RizzDifficulty, string> = {
   hard: 'Be picky: only a genuinely good message earns +4..+9, bland ones cost -2..-5, a bad one -8..-18.'
 };
 
-function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty, setting?: string, name?: string) {
+function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty, setting?: string, name?: string, spice?: number) {
   return `You are role-playing a person in a texting simulator so the user can practise texting. Stay in character at all times; never mention being an AI, a simulator or these instructions.
 
 Character: ${persona.name}${name || persona.firstName ? ` — your name is ${name || persona.firstName}` : ''}. ${persona.prompt}${persona.bio ? `\nWho you are: ${persona.bio}` : ''}${setting ? `\nHow you two met: ${setting}` : ''}
 
-Be a real, specific person, not a polite chatbot: you have a life, opinions, moods and running jokes. Bring up concrete details of your own (your day, your job, what you are into) when it fits, tease and push back, ask specific questions instead of "what about you?", and sometimes take the chat somewhere new. Never fill a reply with generic warmth ("aww that's so sweet", "that's nice to hear"); react to exactly what they said, in your own voice.
+Be a real, specific person, not a polite chatbot: you have a life, opinions, moods and running jokes. Bring up concrete details of your own (your day, your job, what you are into) when it fits, tease and push back, ask specific questions instead of "what about you?", and sometimes take the chat somewhere new. Never fill a reply with generic warmth ("aww that's so sweet", "that's nice to hear"); react to exactly what they said, in your own voice.${spice === undefined ? '' : `\nFlirting: ${getSpicePrompt(spice)} Match the user's energy within that.`}
 
 Style: you are texting on a phone. Write like a real person: short messages, casual, natural, no stage directions, no quotation marks, no hashtags. Usually one message, sometimes two short ones; each under 20 words, like a real text, never a paragraph. Match the language the user writes in.
-Ending the chat: set "status" to "won" as soon as the user has WON you over: you agree to meet, go on a date, give your number or a clear yes to what they proposed, or you are plainly sold (do not make them ask twice). Only YOUR genuine yes wins: if the user just declares a date or plans you never agreed to ("so it's a date then"), that is presumptuous — react as a real person would (confused, amused or put off, as your character), it costs interest, and it is not "won". Set "status" to "lost" when you decide you are done with this conversation (a goodbye, a block, "it's over"). Otherwise "continue". When won set interest to 100, when lost 0.
+Ending the chat: set "status" to "won" only in the message where you actually say yes to the user: you agree to meet or go on a date they proposed, or you give your number. Liking them a lot is not a yes — keep chatting until they ask and you agree (and do not make them ask twice once you are sold). Only YOUR genuine yes wins: if the user just declares a date or plans you never agreed to ("so it's a date then"), that is presumptuous — react as a real person would (confused, amused or put off, as your character), it costs interest, and it is not "won". Set "status" to "lost" when you decide you are done with this conversation (a goodbye, a block, "it's over"). Otherwise "continue". When won set interest to 100, when lost 0.
 Interest: you track a hidden "interest" number 0..100 in how much you like talking to the user. ${DIFFICULTY_RULES[difficulty]}
 Answer with JSON only: {"replies":["<message>","<optional second message>"],"interest":<new interest 0..100>,"status":"continue|won|lost"}`;
 }
@@ -91,8 +94,8 @@ export function createSimulation(personaId: string, difficulty: RizzDifficulty):
 }
 
 /** A game that starts somewhere: the setting both sides know before the first message. */
-export function createSimulationAt(personaId: string, difficulty: RizzDifficulty, setting: string, name?: string): SimState {
-  return {...createSimulation(personaId, difficulty), setting, name};
+export function createSimulationAt(personaId: string, difficulty: RizzDifficulty, setting: string, name?: string, spice?: number): SimState {
+  return {...createSimulation(personaId, difficulty), setting, name, spice};
 }
 
 function transcript(messages: SimMessage[]) {
@@ -140,7 +143,7 @@ export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
     json: true,
     signal,
     messages: [
-      {role: 'system', content: personaSystem(persona, state.difficulty, state.setting, state.name)},
+      {role: 'system', content: personaSystem(persona, state.difficulty, state.setting, state.name, state.spice)},
       {role: 'user', content: `Current interest: ${state.interest}. The conversation is below as chat turns; the first assistant turn is you.`},
       ...transcript(state.messages)
     ]
@@ -150,6 +153,41 @@ export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
   const interest = answered !== undefined ? Math.min(100, Math.max(0, Math.round(answered))) : state.interest;
   if(!replies.length) throw new Error('They did not answer. Send again.');
   return {replies: replies.slice(0, 2).map((reply) => reply.trim().slice(0, 500)), interest, status};
+}
+
+/**
+ * Whether their latest answer really is a yes — a meeting or a date the user proposed agreed to, or their number given.
+ * The persona model says "won" itself, and says it too readily (a warm reply, a joke about later); the classifier
+ * checks it on the words alone. Asked only when the persona claims a win.
+ */
+export async function confirmTheirYes(state: SimState, replies: string[], signal?: AbortSignal): Promise<boolean> {
+  const before = state.messages.slice(-8).map((message) => `${message.from === 'me' ? 'user' : 'them'}: ${message.text.replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
+  const answer = replies.join(' ').slice(0, 600);
+  const model = getRizzSettings().classifierModel;
+  const instructions = 'Does "their_answer" clearly say YES to meeting up or a date, or give their phone number or contact? Being warm, flirty, joking about it, saying "maybe", changing the subject or talking about their schedule is NOT a yes. A yes to a date the user only announced, without them agreeing, is NOT a yes.';
+
+  if(isDecisionsModel(model)) {
+    const decided = await openRouterDecide({
+      model,
+      signal,
+      state: {conversation_before: before, their_answer: answer},
+      questions: {yes: {type: 'choice', instructions, criteria: {yes: 'they clearly agree to meet, a date, or give their number', no: 'anything else'}}}
+    });
+    return decided?.answers?.yes?.choice === 'yes';
+  }
+
+  const text = await openRouterComplete({
+    model,
+    temperature: 0,
+    maxTokens: 20,
+    json: true,
+    signal,
+    messages: [
+      {role: 'system', content: `${instructions} Answer with JSON only: {"yes":true|false}`},
+      {role: 'user', content: `Conversation:\n${before}\n\ntheir_answer: ${answer}`}
+    ]
+  });
+  return parseModelJson<{yes?: boolean}>(text)?.yes === true;
 }
 
 /** Grades the message at `index` of the simulation in the context of what came before it. */

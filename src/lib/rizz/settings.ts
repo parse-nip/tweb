@@ -7,8 +7,9 @@ import {createRoot, createSignal} from 'solid-js';
 
 const STORAGE_KEY = 'tweb-rizz';
 
-// TypeSafe's Jev (https://openrouter.ai/~typesafe/jev-latest); `typesafe/jev-router` is the router listed on OpenRouter
-export const DEFAULT_CLASSIFIER_MODEL = 'typesafe/jev-1.13';
+// a chat model grades: it reads wordplay and callbacks that TypeSafe's Jev (`typesafe/jev-1.13`, a Decisions model,
+// still supported) flattened to the middle labels, and it says why in a sentence of its own
+export const DEFAULT_CLASSIFIER_MODEL = 'google/gemini-2.5-flash';
 export const DEFAULT_FAST_MODEL = 'google/gemini-2.5-flash-lite';
 // the other person in the texting simulator: a step up from the fast model, so they have a voice of their own
 export const DEFAULT_PERSONA_MODEL = 'google/gemini-2.5-flash';

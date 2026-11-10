@@ -4,17 +4,14 @@ import type {RizzDifficulty} from '@lib/rizz/personas';
 
 export type RizzRoute =
   {name: 'home'} |
-  {name: 'play'} |
   {name: 'bots', botId?: string} |
-  {name: 'game', botId?: string, difficulty?: RizzDifficulty, timeControl?: RizzTimeControl, key: number} |
+  {name: 'game', botId: string, difficulty?: RizzDifficulty, timeControl?: RizzTimeControl, key: number} |
   {name: 'review', gameId: string} |
   {name: 'puzzles', puzzleId?: string} |
   {name: 'daily'} |
   {name: 'rush'} |
   {name: 'lessons'} |
   {name: 'lesson', lessonId: string} |
-  {name: 'leaderboard'} |
-  {name: 'leagues'} |
   {name: 'profile'} |
   {name: 'archive'} |
   {name: 'settings'} |

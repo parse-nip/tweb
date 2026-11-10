@@ -96,18 +96,19 @@
     background: var(--rizz-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
     z-index: 6;
+    // * the pill grows around the ball, which keeps its size and its place
+    height: 2rem;
+    border-radius: 1rem;
+    margin: -.25rem;
+    padding: 0 .25rem;
 
     .label {
       max-width: 14rem;
       opacity: 1;
-      padding-inline: .25rem .625rem;
+      padding-inline: .25rem .5rem;
     }
 
-    // * smaller inside the pill than on its own, with room to breathe at the pill's end
     .ball {
-      width: 1.125rem;
-      height: 1.1875rem;
-      margin-inline: .1875rem .0625rem;
       transform: rotate(360deg);
     }
   }
@@ -116,11 +117,10 @@
   &.isIn:focus-visible,
   &.isIn.isOpen {
     .label {
-      padding-inline: .625rem .25rem;
+      padding-inline: .5rem .25rem;
     }
 
     .ball {
-      margin-inline: .0625rem .1875rem;
       transform: rotate(-360deg);
     }
   }

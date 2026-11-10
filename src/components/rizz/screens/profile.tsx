@@ -6,11 +6,13 @@
 import {createMemo, createSignal, For, Show} from 'solid-js';
 import {AVATAR_COLORS} from '@components/rizz/content/bots';
 import {navigate} from '@components/rizz/router';
-import {profile, resetProfile, RizzProfile, setProfile, TIME_CONTROLS} from '@components/rizz/store';
+import {profile, resetProfile, RizzRatingKind, setProfile} from '@components/rizz/store';
 import {ACHIEVEMENTS} from '@components/rizz/world';
 import {Avatar, Block, Graph, Page, SettingsRow, styles, TextField, Topbar} from '@components/rizz/ui';
 import GameRow from '@components/rizz/gameRow';
 import {confirmAction} from '@components/rizz/popups';
+import {RIZZ_SPICE} from '@lib/rizz/spice';
+import RangeStepsSelector from '@components/rangeStepsSelectorTsx';
 import Row from '@components/rowTsx';
 import CheckboxFieldTsx from '@components/checkboxFieldTsx';
 import {IconTsx} from '@components/iconTsx';
@@ -18,22 +20,19 @@ import {appSettings} from '@stores/appSettings';
 import {setSandboxTheme} from '@components/popupSandbox/environment';
 import classNames from '@helpers/string/classNames';
 
-const RATING_KINDS: {id: keyof RizzProfile['ratings'], label: string, icon: Icon}[] = [
-  {id: 'blitz', label: 'Blitz', icon: 'fire'},
-  {id: 'bullet', label: 'Bullet', icon: 'flag'},
-  {id: 'rapid', label: 'Rapid', icon: 'hourglass'},
+const RATING_KINDS: {id: RizzRatingKind, label: string, icon: Icon}[] = [
+  {id: 'rizz', label: 'Rating', icon: 'bots'},
   {id: 'puzzles', label: 'Puzzles', icon: 'lamp'}
 ];
 
 export function ProfileScreen() {
-  const [kind, setKind] = createSignal<keyof RizzProfile['ratings']>('blitz');
+  const [kind, setKind] = createSignal<RizzRatingKind>('rizz');
   const record = createMemo(() => {
     const games = profile.games;
     const count = (result: string) => games.filter((game) => game.result === result).length;
     const accuracy = games.length ? games.reduce((sum, game) => sum + game.accuracy, 0) / games.length : 0;
     return {win: count('win'), draw: count('draw'), loss: count('loss'), accuracy};
   });
-  const best = () => Math.max(profile.ratings.bullet, profile.ratings.blitz, profile.ratings.rapid);
 
   return (
     <>
@@ -42,7 +41,7 @@ export function ProfileScreen() {
         <div class={styles.profileHeader}>
           <Avatar name={profile.name} color={profile.color} size={120} />
           <div class={styles.profileName}>{profile.name}</div>
-          <div class={styles.profileStatus}>best rating {best()} · {profile.visit.streak} day streak</div>
+          <div class={styles.profileStatus}>rating {profile.ratings.rizz} · {profile.visit.streak} day streak</div>
         </div>
         <Block>
           <div class={styles.statsGrid}>
@@ -64,7 +63,7 @@ export function ProfileScreen() {
           )}</For>
           <div class={styles.graphWrap}>
             <Show when={profile.ratingHistory[kind()].length > 1} fallback={
-              <div class={styles.caption}>Play some {kind() === 'puzzles' ? 'puzzles' : 'rated games'} to see your graph.</div>
+              <div class={styles.caption}>Play some {kind() === 'puzzles' ? 'puzzles' : 'games'} to see your graph.</div>
             }>
               <Graph values={profile.ratingHistory[kind()]} />
             </Show>
@@ -102,6 +101,20 @@ export function ArchiveScreen() {
         </Page>
       </Show>
     </>
+  );
+}
+
+/** A spice level (`@lib/rizz/spice`): Telegram's stepped slider, from Wholesome to Spicy. */
+function SpiceSlider(props: {label: string, value: number, onChange: (value: number) => void}) {
+  return (
+    <div class={styles.range}>
+      <div class={styles.rangeHead}><span>{props.label}</span></div>
+      <RangeStepsSelector
+        steps={RIZZ_SPICE.map((item) => [item.title, item.level])}
+        indexByValue={props.value}
+        onValue={(value: number) => props.onChange(value)}
+      />
+    </div>
   );
 }
 
@@ -174,6 +187,10 @@ export function SettingsScreen() {
             checked={profile.settings.ghost}
             onChange={(value) => setProfile('settings', 'ghost', value)}
           />
+          <Show when={profile.settings.ghost}>
+            <SpiceSlider label="Ghost text spice" value={profile.settings.ghostSpice} onChange={(value) => setProfile('settings', 'ghostSpice', value)} />
+          </Show>
+          <SpiceSlider label="Bots' spice" value={profile.settings.botSpice} onChange={(value) => setProfile('settings', 'botSpice', value)} />
           <ToggleRow icon="darkmode" title="Night mode" checked={isNight()} onChange={(value) => setSandboxTheme(value ? 'night' : 'day')} />
         </Block>
         <Block caption="Rizzmate runs entirely in your browser. Nothing you play is sent anywhere.">

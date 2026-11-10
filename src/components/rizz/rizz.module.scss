@@ -1005,61 +1005,6 @@
   display: inline-flex;
 }
 
-// * Home: the hello, and a strip of bots to pick from
-.hello {
-  display: flex;
-  align-items: center;
-  gap: .875rem;
-  padding: .5rem 1rem 0;
-}
-
-.helloName {
-  font-size: 1.25rem;
-  font-weight: var(--font-weight-bold);
-}
-
-.botStrip {
-  display: flex;
-  gap: .75rem;
-  overflow-x: auto;
-  padding: .25rem 1rem .75rem;
-  scrollbar-width: none;
-}
-
-.botChip {
-  flex: 0 0 auto;
-  width: 4.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .25rem;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  padding: .25rem 0;
-  border-radius: .75rem;
-
-  &:hover {
-    background: var(--light-secondary-text-color);
-  }
-}
-
-.botChipName {
-  font-size: .8125rem;
-  font-weight: var(--font-weight-bold);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.botChipRating {
-  font-size: .75rem;
-  color: var(--secondary-text-color);
-}
-
 .buttonRow {
   display: flex;
   gap: .5rem;
@@ -1084,241 +1029,121 @@
   line-height: 1.4;
 }
 
-// * Home: a wider page, a hero card in Telegram Premium's colours, and the bots and the training as tiles
-.pageWide {
-  max-width: 48rem;
-  padding-inline: 1rem;
 
-  @include respond-to(handhelds) {
-    padding-inline: .5rem;
-  }
-}
-
-.hero {
-  border-radius: 1.25rem;
-  padding: 1.25rem;
-  color: #fff;
-  background: linear-gradient(135deg, #6b5cff 0%, #a55eea 55%, #ff6fa8 100%);
-  box-shadow: 0 .5rem 1.5rem rgba(107, 92, 255, .3);
+.rangeHead {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-
-  :global(.is-rtl) & {
-    background: linear-gradient(-135deg, #6b5cff 0%, #a55eea 55%, #ff6fa8 100%);
-  }
-}
-
-.heroTop {
-  display: flex;
-  align-items: center;
-  gap: .875rem;
-
-  .avatar {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
-  }
-}
-
-.heroName {
-  font-size: 1.375rem;
+  justify-content: space-between;
+  padding: .25rem 0;
+  // * the stepped slider draws its step names above its track
+  margin-bottom: 1.5rem;
   font-weight: var(--font-weight-bold);
-  line-height: 1.2;
-}
-
-.heroStreak {
-  display: inline-block;
-  margin-top: .25rem;
-  padding: .125rem .5rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, .2);
-  font-size: .8125rem;
-  font-weight: var(--font-weight-bold);
-}
-
-.heroStats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: .5rem;
-
-  @include respond-to(handhelds) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.heroStat {
-  padding: .5rem .625rem;
-  border-radius: .75rem;
-  background: rgba(255, 255, 255, .16);
 
   b {
-    display: block;
-    font-size: 1.25rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  span {
-    font-size: .75rem;
-    opacity: .85;
+    color: var(--primary-color);
   }
 }
 
-.heroButtons {
+// * The chat and, beside it, the move list — as a chat and its info column in Telegram
+.chatRow {
+  flex: 1 1 auto;
   display: flex;
-  gap: .5rem;
-}
-
-.heroButton {
-  flex: 1 1 0;
-  height: 3rem;
-  border: none;
-  border-radius: .875rem;
-  font: inherit;
-  font-weight: var(--font-weight-bold);
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  transition: transform .1s, filter .15s;
-  background: #fff;
-  color: #6b5cff;
-
-  &:hover {
-    filter: brightness(.96);
-  }
-
-  &:active {
-    transform: scale(.98);
-  }
-
-  :global(.tgico) {
-    font-size: 1.375rem;
-  }
-}
-
-.heroButtonGlass {
-  background: rgba(255, 255, 255, .2);
-  color: #fff;
-
-  &:hover {
-    filter: none;
-    background: rgba(255, 255, 255, .28);
-  }
-}
-
-.sectionTitle {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: .5rem .25rem .25rem;
-  font-size: 1.0625rem;
-  font-weight: var(--font-weight-bold);
-}
-
-.sectionLink {
-  border: none;
-  background: none;
-  color: var(--primary-color);
-  font: inherit;
-  font-size: .875rem;
-  font-weight: var(--font-weight-bold);
-  cursor: pointer;
-}
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
-  gap: .5rem;
-}
-
-.tile {
+  min-height: 0;
   position: relative;
+}
+
+.chatBody {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: .25rem;
-  padding: 1rem .5rem .875rem;
-  border: none;
-  border-radius: 1rem;
+}
+
+.notation {
+  flex: 0 0 22rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: var(--surface-color);
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: var(--section-box-shadow, 0 1px 2px rgba(16, 35, 47, .1));
-  transition: transform .12s, box-shadow .15s;
+  border-inline-start: 1px solid var(--border-color);
 
-  &:hover {
-    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
-  }
-
-  &:active {
-    transform: scale(.98);
+  @include respond-to(handhelds) {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border: none;
   }
 }
 
-.tileWide {
-  flex-direction: row;
-  text-align: start;
-  align-items: center;
-  gap: .75rem;
-  padding: .875rem;
-}
-
-.tileTitle {
-  margin-top: .25rem;
-  font-weight: var(--font-weight-bold);
-  font-size: .9375rem;
-
-  .tileWide & {
-    margin-top: 0;
-  }
-}
-
-.tileSub {
-  font-size: .8125rem;
-  color: var(--secondary-text-color);
-}
-
-.tileRating {
-  margin-top: .25rem;
-  padding: .0625rem .5rem;
-  border-radius: 1rem;
-  background: var(--light-primary-color);
-  color: var(--primary-color);
-  font-size: .75rem;
-  font-weight: var(--font-weight-bold);
-}
-
-.tileBadge {
-  position: absolute;
-  top: .5rem;
-  inset-inline-end: .5rem;
-}
-
-.tileNew {
-  border: 2px dashed var(--light-filled-secondary-text-color);
-  background: transparent;
-  box-shadow: none;
-  color: var(--primary-color);
-  justify-content: center;
-}
-
-.tileNewIcon {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: var(--light-primary-color);
+.notationHeader {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
+  justify-content: space-between;
+  height: 3rem;
+  padding-inline: 1rem .25rem;
+  flex: 0 0 auto;
 }
 
-.cardList {
-  border-radius: 1rem;
-  background: var(--surface-color);
-  padding: .375rem .25rem;
-  box-shadow: var(--section-box-shadow, 0 1px 2px rgba(16, 35, 47, .1));
+.notationTitle {
+  font-weight: var(--font-weight-bold);
+}
+
+.notationList {
+  list-style: none;
+  margin: 0;
+  padding: 0 .5rem .5rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.notationMove {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.75rem 1fr 1fr;
+  gap: .375rem;
+  align-items: start;
+  padding: .375rem .5rem;
+  border: none;
+  border-radius: .625rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: .875rem;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--light-secondary-text-color);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.notationSelected {
+  background: var(--light-primary-color) !important;
+}
+
+.notationNumber {
+  color: var(--secondary-text-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.notationCell {
+  display: flex;
+  align-items: flex-start;
+  gap: .375rem;
+  min-width: 0;
+}
+
+.notationText {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+.notationTheirs {
+  color: var(--secondary-text-color);
 }

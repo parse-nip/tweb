@@ -11,7 +11,6 @@ import {
 import {classifyLines} from '@lib/rizz/classifier';
 import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
 import {profile, pushRating, setProfile} from '@components/rizz/store';
-import {addTrophies, TROPHIES} from '@components/rizz/world';
 import {
   ActionPlate, Avatar, BubbleData, createNow, formatClock, Glyph, Messages, Page, PinnedBar, signed, styles, Topbar
 } from '@components/rizz/ui';
@@ -91,7 +90,6 @@ export function PuzzleBoard(props: {
 function markSolved(id: string) {
   if(!profile.puzzlesSolved.includes(id)) {
     setProfile('puzzlesSolved', (list) => [...list, id]);
-    addTrophies(TROPHIES.puzzle);
   }
 }
 
@@ -214,7 +212,6 @@ export function RushScreen() {
       setProfile('rushBest', score());
       setNewBest(true);
     }
-    if(score()) addTrophies(Math.ceil(score() / 2));
   };
 
   const timeCheck = setInterval(() => {
