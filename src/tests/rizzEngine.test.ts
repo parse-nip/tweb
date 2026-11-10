@@ -4,7 +4,7 @@ import {
   updateRating
 } from '@components/rizz/engine';
 import LESSONS from '@components/rizz/content/lessons';
-import {BOTS} from '@components/rizz/content/bots';
+import {buildBots} from '@components/rizz/content/bots';
 import {RIZZ_PERSONAS} from '@lib/rizz/personas';
 
 describe('rizz content', () => {
@@ -19,8 +19,15 @@ describe('rizz content', () => {
   }
 
   it('plays every Rizz Coach persona as a bot, weakest first', () => {
-    expect(BOTS.map((bot) => bot.id).sort()).toEqual(RIZZ_PERSONAS.map((persona) => persona.id).sort());
-    expect(BOTS.map((bot) => bot.rating)).toEqual([...BOTS.map((bot) => bot.rating)].sort((a, b) => a - b));
+    const bots = buildBots();
+    expect(bots.map((bot) => bot.id).sort()).toEqual(RIZZ_PERSONAS.map((persona) => persona.id).sort());
+    expect(bots.map((bot) => bot.rating)).toEqual([...bots.map((bot) => bot.rating)].sort((a, b) => a - b));
+  });
+
+  it('matches the player with the opposite sex', () => {
+    expect(buildBots('woman').every((bot) => bot.gender === 'woman')).toBe(true);
+    expect(buildBots('man').map((bot) => bot.name)).toContain('Milo');
+    expect(new Set(buildBots().map((bot) => bot.gender)).size).toBe(2);
   });
 });
 

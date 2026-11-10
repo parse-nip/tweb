@@ -4,9 +4,10 @@
  * player's rating.
  */
 
-import {BOTS, botPersona, RizzBot} from '@components/rizz/content/bots';
+import {botPersona, buildBots, RizzBot} from '@components/rizz/content/bots';
+import type {RizzGender} from '@lib/rizz/simulator';
 import {RIZZ_DIFFICULTIES, RizzDifficulty, setCustomRizzPersonas} from '@lib/rizz/personas';
-import {profile, RizzProfile, setProfile} from '@components/rizz/store';
+import {profile, RizzProfile, RizzSex, setProfile} from '@components/rizz/store';
 
 /** A bot's strength at a difficulty: what a game against it is rated as. */
 export function botRating(bot: RizzBot, difficulty: RizzDifficulty) {
@@ -40,9 +41,18 @@ export const ACHIEVEMENTS: RizzAchievement[] = [
   {id: 'hard', emoji: '🔥', title: 'No easy mode', description: 'Win a game on Hard', done: (p) => p.games.some((g) => g.result === 'win' && g.opponent.difficulty === 'hard')}
 ];
 
-/** The built-in bots, then the player's own from the bot maker. */
+/** The player as the personas read them, and who they are matched with: the opposite sex. */
+export function playerGender(sex = profile.settings.sex): RizzGender | undefined {
+  return sex === 'male' ? 'man' : sex === 'female' ? 'woman' : undefined;
+}
+
+export function matchGender(sex: RizzSex | undefined = profile.settings.sex): RizzGender | undefined {
+  return sex === 'male' ? 'woman' : sex === 'female' ? 'man' : undefined;
+}
+
+/** The built-in bots, of the sex the player is matched with, then the player's own from the bot maker. */
 export function allBots(): RizzBot[] {
-  return [...BOTS, ...profile.customBots];
+  return [...buildBots(matchGender()), ...profile.customBots];
 }
 
 export function getBot(id: string) {

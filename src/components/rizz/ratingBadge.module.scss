@@ -177,6 +177,49 @@
     transform: none;
     pointer-events: auto;
     transition-delay: 0s;
+
+    // * it pops each time it opens: a fade, and at full animations a spring up from a little smaller
+    @include animation-level-global(1) {
+      animation: whyFade .2s ease-out both;
+    }
+
+    @include animation-level-global(2) {
+      animation: whyPop .34s cubic-bezier(.25, 1.35, .45, 1) both;
+    }
+  }
+
+  .isFlipped.isOpen & {
+    @include animation-level-global(2) {
+      animation-name: whyPopDown;
+    }
+  }
+}
+
+@keyframes whyFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes whyPop {
+  from {
+    opacity: 0;
+    transform: translateY(.75rem) scale(.85);
+  }
+
+  60% {
+    opacity: 1;
+  }
+}
+
+@keyframes whyPopDown {
+  from {
+    opacity: 0;
+    transform: translateY(-.75rem) scale(.85);
+  }
+
+  60% {
+    opacity: 1;
   }
 }
 

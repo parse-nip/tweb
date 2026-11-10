@@ -12,10 +12,11 @@ import {getRizzRatingDef, RIZZ_RATINGS, RizzVerdict} from '@lib/rizz/ratings';
 import {navigate} from '@components/rizz/router';
 import {getGame, profile, setProfile} from '@components/rizz/store';
 import {
-  ActionPlate, Avatar, BubbleData, Glyph, Graph, Messages, PinnedBar, signed, styles, Topbar, VibeLine
+  ActionPlate, Avatar, BubbleData, messageLook, Glyph, Graph, Messages, PinnedBar, signed, styles, Topbar, VibeLine
 } from '@components/rizz/ui';
 import Composer from '@components/rizz/composer';
-import Notation from '@components/rizz/notation';
+import showBadgeLegend from '@components/rizz/legend';
+import {describeMessage} from '@lib/rizz/stickers';
 import {ButtonIconTsx} from '@components/buttonIconTsx';
 
 export default function ReviewScreen(props: {gameId: string}) {
@@ -29,10 +30,10 @@ export default function ReviewScreen(props: {gameId: string}) {
   // * retrying the selected message: undefined — not retrying, null — writing, else the new one's verdict
   const [retry, setRetry] = createSignal<{text?: string, verdict?: RizzVerdict, grading?: boolean} | null>();
   const [feedback, setFeedback] = createSignal(game.coachReview);
-  const [showMoves, setShowMoves] = createSignal(window.innerWidth > 1100);
 
   const items = createMemo<BubbleData[]>(() => game.messages.map((message) => ({
     text: message.text,
+    ...messageLook(message.text),
     out: message.from === 'me',
     verdict: message.verdict,
     delta: message.delta
@@ -65,7 +66,7 @@ export default function ReviewScreen(props: {gameId: string}) {
   /** The chat before the selected message, as the classifier reads it. */
   const linesBefore = () => {
     const index = game.messages.indexOf(message());
-    return game.messages.slice(0, index).map((item) => ({mid: item.id, out: item.from === 'me', text: item.text}));
+    return game.messages.slice(0, index).map((item) => ({mid: item.id, out: item.from === 'me', text: describeMessage(item.text)}));
   };
 
   const gradeRetry = async(text: string) => {
@@ -106,7 +107,7 @@ export default function ReviewScreen(props: {gameId: string}) {
         title={`Game Review · ${game.opponent.name}`}
         subtitle={`${game.result === 'win' ? 'checkmate' : game.result === 'draw' ? 'draw' : 'lost'} · message ${selected() + 1} of ${mine.length}`}
         onBack={() => navigate({name: 'archive'})}
-        right={<ButtonIconTsx icon="list" aria-label="Moves" aria-pressed={showMoves()} onClick={() => setShowMoves((value) => !value)} />}
+        right={<ButtonIconTsx icon="info" aria-label="What the badges mean" title="What the badges mean" onClick={showBadgeLegend} />}
       />
       <div class={styles.chatRow}>
       <div class={styles.chatBody}>
@@ -191,9 +192,6 @@ export default function ReviewScreen(props: {gameId: string}) {
         </Show>
       </div>
       </div>
-      <Show when={showMoves()}>
-        <Notation messages={game.messages} selected={selected()} onPick={select} onClose={() => setShowMoves(false)} />
-      </Show>
       </div>
     </>
   );

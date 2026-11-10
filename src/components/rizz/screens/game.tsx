@@ -15,13 +15,14 @@ import type {RizzDifficulty} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo} from '@lib/rizz/ratings';
 import {navigate, RizzRoute, setLeaveGuard} from '@components/rizz/router';
 import {profile, pushRating, RizzGameRecord, RizzOpponent, RizzTimeControl, saveGame, TIME_CONTROLS} from '@components/rizz/store';
-import {botRating, getBot, quickBot} from '@components/rizz/world';
+import {botRating, getBot, playerGender, quickBot} from '@components/rizz/world';
 import {
-  ActionPlate, Avatar, BubbleData, createNow, formatClock, formatTime, formatTimeControl, menuItem, Messages, styles,
+  ActionPlate, Avatar, BubbleData, messageLook, createNow, formatClock, formatTime, formatTimeControl, menuItem, Messages, styles,
   Topbar, VibeLine
 } from '@components/rizz/ui';
 import Composer, {ComposerHandle} from '@components/rizz/composer';
-import Notation from '@components/rizz/notation';
+import showBadgeLegend from '@components/rizz/legend';
+import {describeMessage} from '@lib/rizz/stickers';
 import {ButtonIconTsx} from '@components/buttonIconTsx';
 import {confirmAction, showGameResult} from '@components/rizz/popups';
 import {toast} from '@components/toast';
@@ -67,7 +68,12 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   const control = timeControl && TIME_CONTROLS[timeControl];
 
   const setting = pickSetting();
-  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, opponent.name, profile.settings.botSpice));
+  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, {
+    name: opponent.name,
+    spice: profile.settings.botSpice,
+    gender: bot.gender,
+    userGender: playerGender()
+  }));
   const [typing, setTyping] = createSignal(false);
   const [waiting, setWaiting] = createSignal(false);
   const [over, setOver] = createSignal<{result: RizzResult, reason: RizzEndReason}>();
@@ -79,9 +85,6 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
   const [record, setRecord] = createSignal<RizzGameRecord>();
   // * the chat's own last word: "left you on read", "said yes"
   const [endLine, setEndLine] = createSignal<string>();
-  // * the move list beside the chat: open from the start on a wide screen, as chess.com shows it
-  const [showMoves, setShowMoves] = createSignal(window.innerWidth > 1100);
-  let scrollEl: HTMLDivElement;
   let composer: ComposerHandle;
   let nextId = 1;
   let alive = true;
@@ -299,13 +302,14 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
 
   const items = createMemo<BubbleData[]>(() => sim().messages.map((message): BubbleData => ({
     text: message.text,
+    ...messageLook(message.text),
     out: message.from === 'me',
     time: times().get(message.id),
     verdict: message.verdict || (message.grading ? 'pending' : undefined),
     delta: message.delta
   })).concat(endLine() ? [{text: endLine(), ghost: true} as BubbleData] : []));
 
-  const lines = createMemo(() => sim().messages.map((message) => ({mid: message.id, out: message.from === 'me', text: message.text})));
+  const lines = createMemo(() => sim().messages.map((message) => ({mid: message.id, out: message.from === 'me', text: describeMessage(message.text)})));
 
   const subtitle = () => {
     if(typing()) return <span class={styles.accent}>typing…</span>;
@@ -322,7 +326,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
         title={opponent.name}
         subtitle={subtitle()}
         right={<>
-          <ButtonIconTsx icon="list" aria-label="Moves" aria-pressed={showMoves()} onClick={() => setShowMoves((value) => !value)} />
+          <ButtonIconTsx icon="info" aria-label="What the badges mean" title="What the badges mean" onClick={showBadgeLegend} />
           <Show when={control}>
           <div
             class={classNames(styles.clock, myTurn() && styles.running, myTurn() && remaining() < 10000 && styles.low)}
@@ -345,7 +349,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       <Show when={profile.settings.vibeBar}>
         <VibeLine probability={sim().interest / 100} />
       </Show>
-      <Messages ref={(el) => scrollEl = el} service={`${setting}\nYou open.`} items={items()} typing={typing()} />
+      <Messages service={`${setting}\nYou open.`} items={items()} typing={typing()} />
       <div class={styles.composer}>
         <Show when={!over()} fallback={
           <ActionPlate
@@ -369,13 +373,6 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
         </Show>
       </div>
       </div>
-      <Show when={showMoves()}>
-        <Notation
-          messages={sim().messages}
-          onPick={(move) => scrollEl?.querySelectorAll<HTMLElement>(`.${styles.out}`)[move]?.scrollIntoView({block: 'center', behavior: 'smooth'})}
-          onClose={() => setShowMoves(false)}
-        />
-      </Show>
       </div>
     </>
   );

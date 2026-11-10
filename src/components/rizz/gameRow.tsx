@@ -8,11 +8,13 @@ import {Show} from 'solid-js';
 import {navigate} from '@components/rizz/router';
 import type {RizzGameRecord} from '@components/rizz/store';
 import {Avatar, Glyph, ListRow, styles} from '@components/rizz/ui';
+import {parseSticker} from '@lib/rizz/stickers';
 
 function lastLine(game: RizzGameRecord) {
   const last = game.messages[game.messages.length - 1];
   if(!last) return 'No messages';
-  return (last.from === 'me' ? 'You: ' : '') + last.text;
+  // * a sticker reads as Telegram's list writes one
+  return (last.from === 'me' ? 'You: ' : '') + (parseSticker(last.text) ? 'Sticker' : last.text);
 }
 
 function when(date: number) {

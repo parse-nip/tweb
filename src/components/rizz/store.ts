@@ -68,7 +68,7 @@ export type RizzProfile = {
   lessonsDone: string[],
   beatenBots: string[],
   /** ghost text is off until switched on; the spice of the suggestions and of the bots is `@lib/rizz/spice`'s */
-  settings: {vibeBar: boolean, ghost: boolean, ghostSpice: number, botSpice: number},
+  settings: {vibeBar: boolean, ghost: boolean, ghostSpice: number, botSpice: number, sex?: RizzSex},
   customBots: RizzBot[]
 };
 
@@ -77,6 +77,9 @@ const STORAGE_KEY = 'rizz-profile-v3';
 const PREVIOUS_KEY = 'rizz-profile-v2';
 
 export type RizzRatingKind = 'rizz' | 'puzzles';
+
+/** who the player is: they are matched with the opposite sex */
+export type RizzSex = 'male' | 'female';
 const MAX_GAMES = 100;
 
 export function defaultProfile(): RizzProfile {

@@ -4,6 +4,7 @@
  */
 
 import {RIZZ_PERSONAS, RizzPersona} from '@lib/rizz/personas';
+import type {RizzGender} from '@lib/rizz/simulator';
 
 export type RizzAvatarColor = 'red' | 'orange' | 'violet' | 'green' | 'cyan' | 'pink' | 'blue' | 'premium' | 'stars';
 
@@ -17,6 +18,8 @@ export type RizzBot = {
   tagline: string,
   /** what kind of texter they are: the persona's own title */
   kind?: string,
+  /** a built-in bot is a woman or a man, as the player is matched */
+  gender?: RizzGender,
   /** made in the bot maker: kept with the player's progress */
   custom?: boolean,
   /** a custom bot's character, as the persona prompt has it */
@@ -49,16 +52,26 @@ export const PERSONALITIES: {[key in RizzPersonality]: {label: string, icon: Ico
 
 const PERSONA_COLORS: RizzAvatarColor[] = ['green', 'orange', 'cyan', 'pink', 'blue', 'violet', 'red', 'premium'];
 
-export const BOTS: RizzBot[] = RIZZ_PERSONAS
-.map((persona, index) => ({
-  id: persona.id,
-  name: persona.firstName || persona.name.replace(/^The /, ''),
-  kind: persona.name.replace(/^The /, ''),
-  rating: persona.elo,
-  color: PERSONA_COLORS[index % PERSONA_COLORS.length],
-  tagline: persona.tagline
-}))
-.sort((a, b) => a.rating - b.rating);
+/**
+ * The personas as bots, of the gender the player is matched with: all women, all men, or — before the player has
+ * said who they are — a mix.
+ */
+export function buildBots(match?: RizzGender): RizzBot[] {
+  return RIZZ_PERSONAS
+  .map((persona, index) => {
+    const gender: RizzGender = match || (index % 2 ? 'man' : 'woman');
+    return {
+      id: persona.id,
+      name: (gender === 'man' ? persona.maleName : persona.firstName) || persona.name.replace(/^The /, ''),
+      kind: persona.name.replace(/^The /, ''),
+      gender,
+      rating: persona.elo,
+      color: PERSONA_COLORS[index % PERSONA_COLORS.length],
+      tagline: persona.tagline
+    };
+  })
+  .sort((a, b) => a.rating - b.rating);
+}
 
 /** A custom bot as the simulator's persona. */
 export function botPersona(bot: RizzBot): RizzPersona {

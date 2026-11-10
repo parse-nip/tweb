@@ -172,6 +172,16 @@ export function SettingsScreen() {
             )}</For>
           </div>
         </Block>
+        <Block name="You are" caption="You're matched with the opposite sex: every bot becomes one.">
+          <For each={[{id: 'male' as const, title: 'A man'}, {id: 'female' as const, title: 'A woman'}]}>{(item) => (
+            <SettingsRow
+              icon="user"
+              title={item.title}
+              right={profile.settings.sex === item.id && <IconTsx icon="check" class={styles.check} />}
+              onClick={() => setProfile('settings', 'sex', item.id)}
+            />
+          )}</For>
+        </Block>
         <Block name="Game">
           <ToggleRow
             icon="like"

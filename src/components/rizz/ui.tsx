@@ -15,6 +15,9 @@ import ChatInputPlate, {CHAT_INPUT_PLATE_SINGLE_CLASS} from '@components/chat/co
 import InputField from '@components/inputField';
 import ripple from '@components/ripple';
 import {hotEffect} from '@helpers/hotModule';
+import LottieAnimation from '@components/lottieAnimation';
+import lottieLoader from '@lib/lottie/lottieLoader';
+import {isBigEmoji, parseSticker, RIZZ_STICKERS, RizzStickerId} from '@lib/rizz/stickers';
 import createRatingGlyph from '@components/rizz/ratingGlyph';
 import badgeStyles from '@components/rizz/ratingBadge.module.scss';
 import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
@@ -303,8 +306,18 @@ export type BubbleData = {
   /** what the message did to the player's Elo */
   delta?: number,
   /** A line the chat says, not a person: "Seen", a result. */
-  ghost?: boolean
+  ghost?: boolean,
+  /** an animated sticker, drawn with no bubble as Telegram draws one */
+  sticker?: RizzStickerId,
+  /** one to three emoji: big, with no bubble */
+  bigEmoji?: boolean
 };
+
+/** A message as the chat draws it: a sticker or big emoji where it is one. */
+export function messageLook(text: string): Pick<BubbleData, 'sticker' | 'bigEmoji'> {
+  const sticker = parseSticker(text);
+  return {sticker, bigEmoji: !sticker && isBigEmoji(text)};
+}
 
 /** A message bubble the way Telegram draws one, its tail cut to the shape `_chatBubble.scss` cuts its own to. */
 export function Bubble(props: BubbleData & {
@@ -322,6 +335,8 @@ export function Bubble(props: BubbleData & {
         props.selected && styles.selected,
         props.onClick && styles.selectable,
         props.ghost && styles.ghost,
+        (props.sticker || props.bigEmoji) && styles.bare,
+        props.bigEmoji && styles.bigEmoji,
         props.animate && styles.bubbleIn
       )}
       onClick={props.onClick}
@@ -330,7 +345,18 @@ export function Bubble(props: BubbleData & {
       <Show when={props.verdict} keyed>
         {(verdict) => <BubbleBadge verdict={verdict} out={props.out} delta={props.delta} />}
       </Show>
-      {props.text}
+      <Show when={props.sticker} keyed fallback={props.text}>
+        {(sticker) => (
+          <LottieAnimation
+            lottieLoader={lottieLoader}
+            class={styles.sticker}
+            name={RIZZ_STICKERS[sticker].asset}
+            size={150}
+            restartOnClick
+            lottieOptions={{loop: false}}
+          />
+        )}
+      </Show>
       <Show when={props.time && !props.ghost}>
         <span class={styles.time}>
           {props.time}
@@ -339,7 +365,7 @@ export function Bubble(props: BubbleData & {
           </Show>
         </span>
       </Show>
-      <Show when={props.tail && !props.ghost}>
+      <Show when={props.tail && !props.ghost && !props.sticker && !props.bigEmoji}>
         <span class={styles.tailShape} aria-hidden="true" />
       </Show>
     </div>

@@ -1043,7 +1043,7 @@
   }
 }
 
-// * The chat and, beside it, the move list — as a chat and its info column in Telegram
+// * The chat, and the column beside it
 .chatRow {
   flex: 1 1 auto;
   display: flex;
@@ -1058,92 +1058,70 @@
   flex-direction: column;
 }
 
-.notation {
-  flex: 0 0 22rem;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--surface-color);
-  border-inline-start: 1px solid var(--border-color);
-
-  @include respond-to(handhelds) {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    border: none;
-  }
+// * the badges' legend
+.legendPopup :global(.popup-container) {
+  width: 26rem;
+  max-width: calc(100vw - 2rem);
 }
 
-.notationHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 3rem;
-  padding-inline: 1rem .25rem;
-  flex: 0 0 auto;
-}
-
-.notationTitle {
-  font-weight: var(--font-weight-bold);
-}
-
-.notationList {
+.legend {
   list-style: none;
   margin: 0;
-  padding: 0 .5rem .5rem;
-  overflow-y: auto;
-  min-height: 0;
+  padding: 0 .5rem .75rem;
 }
 
-.notationMove {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1.75rem 1fr 1fr;
-  gap: .375rem;
-  align-items: start;
-  padding: .375rem .5rem;
-  border: none;
-  border-radius: .625rem;
-  background: none;
-  color: inherit;
-  font: inherit;
+.legendRow {
+  display: flex;
+  gap: .75rem;
+  align-items: flex-start;
+  padding: .5rem;
+
+  b {
+    display: block;
+  }
+}
+
+.legendHint {
+  display: block;
+  color: var(--secondary-text-color);
   font-size: .875rem;
-  text-align: start;
+  line-height: 1.35;
+}
+
+// * a sticker or big emoji: no bubble, as Telegram draws them; the time on a pill of its own
+.bare {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+
+  .time {
+    float: none;
+    display: inline-flex;
+    margin: .25rem 0 0;
+    padding: .125rem .375rem;
+    border-radius: .625rem;
+    background: var(--message-time-background, rgba(0, 0, 0, .35));
+    color: #fff;
+  }
+
+  &.out .time {
+    color: #fff;
+  }
+}
+
+.bigEmoji {
+  font-size: 3rem;
+  line-height: 1.1;
+}
+
+// * the player draws into a box of its `--size`
+.sticker {
+  width: var(--size);
+  height: var(--size);
   cursor: pointer;
 
-  &:hover:not(:disabled) {
-    background: var(--light-secondary-text-color);
+  canvas {
+    width: 100%;
+    height: 100%;
   }
-
-  &:disabled {
-    cursor: default;
-  }
-}
-
-.notationSelected {
-  background: var(--light-primary-color) !important;
-}
-
-.notationNumber {
-  color: var(--secondary-text-color);
-  font-variant-numeric: tabular-nums;
-}
-
-.notationCell {
-  display: flex;
-  align-items: flex-start;
-  gap: .375rem;
-  min-width: 0;
-}
-
-.notationText {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-height: 1.3;
-}
-
-.notationTheirs {
-  color: var(--secondary-text-color);
 }
