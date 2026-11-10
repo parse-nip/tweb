@@ -10,6 +10,8 @@ const STORAGE_KEY = 'tweb-rizz';
 // TypeSafe's Jev (https://openrouter.ai/~typesafe/jev-latest); `typesafe/jev-router` is the router listed on OpenRouter
 export const DEFAULT_CLASSIFIER_MODEL = 'typesafe/jev-1.13';
 export const DEFAULT_FAST_MODEL = 'google/gemini-2.5-flash-lite';
+// the other person in the texting simulator: a step up from the fast model, so they have a voice of their own
+export const DEFAULT_PERSONA_MODEL = 'google/gemini-2.5-flash';
 // the API root: chat completions are at <root>/v1/chat/completions, Decisions (Jev) at <root>/alpha/decisions
 export const DEFAULT_BASE_URL = 'https://openrouter.ai/api';
 
@@ -17,6 +19,7 @@ export type RizzSettings = {
   apiKey: string,
   classifierModel: string,
   fastModel: string,
+  personaModel: string,
   /** a chess label on every message of the open chat */
   ratings: boolean,
   /** ghost text in the composer */
@@ -41,6 +44,7 @@ export function getRizzSettings(): RizzSettings {
     apiKey: stored.apiKey || env.VITE_OPENROUTER_API_KEY || env.OPENROUTER_API_KEY || '',
     classifierModel: stored.classifierModel || env.VITE_OPENROUTER_CLASSIFIER_MODEL || DEFAULT_CLASSIFIER_MODEL,
     fastModel: stored.fastModel || env.VITE_OPENROUTER_FAST_MODEL || DEFAULT_FAST_MODEL,
+    personaModel: stored.personaModel || env.VITE_OPENROUTER_PERSONA_MODEL || DEFAULT_PERSONA_MODEL,
     ratings: stored.ratings ?? false,
     ghost: stored.ghost ?? false
   };

@@ -1,11 +1,12 @@
 import {createRoot, createSignal} from 'solid-js';
 import type {RizzTimeControl} from '@components/rizz/store';
+import type {RizzDifficulty} from '@lib/rizz/personas';
 
 export type RizzRoute =
   {name: 'home'} |
   {name: 'play'} |
-  {name: 'bots'} |
-  {name: 'game', opponentId?: string, botId?: string, timeControl?: RizzTimeControl, key: number} |
+  {name: 'bots', botId?: string} |
+  {name: 'game', botId?: string, difficulty?: RizzDifficulty, timeControl?: RizzTimeControl, key: number} |
   {name: 'review', gameId: string} |
   {name: 'puzzles', puzzleId?: string} |
   {name: 'daily'} |

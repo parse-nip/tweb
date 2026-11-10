@@ -8,7 +8,8 @@ import {AVATAR_COLORS} from '@components/rizz/content/bots';
 import {navigate} from '@components/rizz/router';
 import {profile, resetProfile, RizzProfile, setProfile, TIME_CONTROLS} from '@components/rizz/store';
 import {ACHIEVEMENTS} from '@components/rizz/world';
-import {Avatar, Block, Graph, ListRow, Page, SettingsRow, signed, styles, TextField, Topbar} from '@components/rizz/ui';
+import {Avatar, Block, Graph, Page, SettingsRow, styles, TextField, Topbar} from '@components/rizz/ui';
+import GameRow from '@components/rizz/gameRow';
 import {confirmAction} from '@components/rizz/popups';
 import Row from '@components/rowTsx';
 import CheckboxFieldTsx from '@components/checkboxFieldTsx';
@@ -96,20 +97,7 @@ export function ArchiveScreen() {
       <Show when={profile.games.length} fallback={<div class={styles.emptyPill}>No games yet</div>}>
         <Page>
           <Block caption="Open a game for its review.">
-            <For each={profile.games}>{(game) => (
-              <ListRow
-                media={<Avatar name={game.opponent.name} color={game.opponent.color} />}
-                title={`${game.opponent.name} · ${game.result === 'win' ? 'date' : game.result === 'draw' ? 'friendzoned' : 'ghosted'}`}
-                subtitle={`${game.timeControl ? TIME_CONTROLS[game.timeControl].label : 'bot'} · ${game.messages.filter((message) => message.from === 'me').length} messages · accuracy ${game.accuracy}`}
-                meta={new Date(game.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
-                badge={game.ratingAfter !== undefined && (
-                  <span class={styles.rowMeta} classList={{[styles.up]: game.ratingAfter > game.ratingBefore, [styles.down]: game.ratingAfter < game.ratingBefore}}>
-                    {signed(game.ratingAfter - game.ratingBefore)}
-                  </span>
-                )}
-                onClick={() => navigate({name: 'review', gameId: game.id})}
-              />
-            )}</For>
+            <For each={profile.games}>{(game) => <GameRow game={game} />}</For>
           </Block>
         </Page>
       </Show>

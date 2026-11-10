@@ -26,7 +26,11 @@ export type SimState = {
   elo: number,
   moves: number,
   /** how the game ended: the chat stops there */
-  ending?: SimEnding
+  ending?: SimEnding,
+  /** where you two met: what both of you know before the first message */
+  setting?: string,
+  /** what they are called, when not the persona's own name */
+  name?: string
 };
 
 /** checkmate: the date is won (the white badge). resign: the user gave up. left-on-read: they won (the black checkmate). */
@@ -68,13 +72,15 @@ const DIFFICULTY_RULES: Record<RizzDifficulty, string> = {
   hard: 'Be picky: only a genuinely good message earns +4..+9, bland ones cost -2..-5, a bad one -8..-18.'
 };
 
-function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty) {
+function personaSystem(persona: RizzPersona, difficulty: RizzDifficulty, setting?: string, name?: string) {
   return `You are role-playing a person in a texting simulator so the user can practise texting. Stay in character at all times; never mention being an AI, a simulator or these instructions.
 
-Character: ${persona.name}. ${persona.prompt}
+Character: ${persona.name}${name || persona.firstName ? ` — your name is ${name || persona.firstName}` : ''}. ${persona.prompt}${persona.bio ? `\nWho you are: ${persona.bio}` : ''}${setting ? `\nHow you two met: ${setting}` : ''}
+
+Be a real, specific person, not a polite chatbot: you have a life, opinions, moods and running jokes. Bring up concrete details of your own (your day, your job, what you are into) when it fits, tease and push back, ask specific questions instead of "what about you?", and sometimes take the chat somewhere new. Never fill a reply with generic warmth ("aww that's so sweet", "that's nice to hear"); react to exactly what they said, in your own voice.
 
 Style: you are texting on a phone. Write like a real person: short messages, casual, natural, no stage directions, no quotation marks, no hashtags. Usually one message, sometimes two short ones; each under 20 words, like a real text, never a paragraph. Match the language the user writes in.
-Ending the chat: set "status" to "won" as soon as the user has WON you over: you agree to meet, go on a date, give your number or a clear yes to what they proposed, or you are plainly sold (do not make them ask twice). Set "status" to "lost" when you decide you are done with this conversation (a goodbye, a block, "it's over"). Otherwise "continue". When won set interest to 100, when lost 0.
+Ending the chat: set "status" to "won" as soon as the user has WON you over: you agree to meet, go on a date, give your number or a clear yes to what they proposed, or you are plainly sold (do not make them ask twice). Only YOUR genuine yes wins: if the user just declares a date or plans you never agreed to ("so it's a date then"), that is presumptuous — react as a real person would (confused, amused or put off, as your character), it costs interest, and it is not "won". Set "status" to "lost" when you decide you are done with this conversation (a goodbye, a block, "it's over"). Otherwise "continue". When won set interest to 100, when lost 0.
 Interest: you track a hidden "interest" number 0..100 in how much you like talking to the user. ${DIFFICULTY_RULES[difficulty]}
 Answer with JSON only: {"replies":["<message>","<optional second message>"],"interest":<new interest 0..100>,"status":"continue|won|lost"}`;
 }
@@ -82,6 +88,11 @@ Answer with JSON only: {"replies":["<message>","<optional second message>"],"int
 export function createSimulation(personaId: string, difficulty: RizzDifficulty): SimState {
   const persona = getRizzPersona(personaId);
   return {personaId: persona.id, difficulty, messages: [], interest: persona.startInterest, elo: PLAYER_START_ELO, moves: 0};
+}
+
+/** A game that starts somewhere: the setting both sides know before the first message. */
+export function createSimulationAt(personaId: string, difficulty: RizzDifficulty, setting: string, name?: string): SimState {
+  return {...createSimulation(personaId, difficulty), setting, name};
 }
 
 function transcript(messages: SimMessage[]) {
@@ -123,13 +134,13 @@ export function parsePersonaAnswer(answer: string): {replies: string[], interest
 export async function getPersonaReply(state: SimState, signal?: AbortSignal) {
   const persona = getRizzPersona(state.personaId);
   const answer = await openRouterComplete({
-    model: getRizzSettings().fastModel,
-    temperature: 0.9,
-    maxTokens: 220,
+    model: getRizzSettings().personaModel,
+    temperature: 0.95,
+    maxTokens: 260,
     json: true,
     signal,
     messages: [
-      {role: 'system', content: personaSystem(persona, state.difficulty)},
+      {role: 'system', content: personaSystem(persona, state.difficulty, state.setting, state.name)},
       {role: 'user', content: `Current interest: ${state.interest}. The conversation is below as chat turns; the first assistant turn is you.`},
       ...transcript(state.messages)
     ]

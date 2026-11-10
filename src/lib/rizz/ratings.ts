@@ -31,7 +31,7 @@ export const RIZZ_RATINGS: RizzRatingDef[] = [
   {id: 'mistake', symbol: '?', color: '#e58f2a', title: 'Mistake', accuracy: 25, hint: 'a message that hurts the vibe: awkward, boring, try-hard, or pushy'},
   {id: 'miss', symbol: '✗', color: '#ff7769', title: 'Miss', accuracy: 20, hint: 'ignored an obvious opening or question, or dodged what they were offering'},
   {id: 'blunder', symbol: '??', color: '#ca3431', title: 'Blunder', accuracy: 0, hint: 'a conversation-killer: rude, creepy, desperate, passive-aggressive or offensive'},
-  {id: 'checkmate', symbol: '#', color: '#4f5b66', title: 'Checkmate', accuracy: 100, hint: 'ends the conversation in the user\'s favour: a date agreed, a number given, a perfect last word. Very rare'},
+  {id: 'checkmate', symbol: '#', color: '#4f5b66', title: 'Checkmate', accuracy: 100, hint: 'ends the conversation in the user\'s favour: the other person has said yes to a date, given their number, or is plainly won over. Very rare. The user announcing a date or plans the other person never agreed to is NOT checkmate — it is presumptuous'},
   {id: 'resign', symbol: '🏳', color: '#7d848b', title: 'Resign', accuracy: 0, hint: 'gives up: a surrender, an apology spiral, "forget it", "never mind"'}
 ];
 

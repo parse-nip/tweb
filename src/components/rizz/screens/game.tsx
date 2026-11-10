@@ -6,11 +6,12 @@
  */
 
 import {batch, createMemo, createSignal, onCleanup, onMount, Show} from 'solid-js';
-import {resultOfEnding, resultScore, RizzEndReason, RizzResult, updateRating} from '@components/rizz/engine';
+import {getScenarios, resultOfEnding, resultScore, RizzEndReason, RizzResult, updateRating} from '@components/rizz/engine';
 import {
-  applyInterest, applyVerdict, createSimulation, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SimMessage, SimState
+  applyInterest, applyVerdict, createSimulationAt, getPersonaReply, gradeSimMessage, SIM_MAX_USER_MESSAGES, SIM_WIN_INTEREST, SimMessage,
+  SimState, SimStatus
 } from '@lib/rizz/simulator';
-import {getRizzPersona, RizzDifficulty} from '@lib/rizz/personas';
+import type {RizzDifficulty} from '@lib/rizz/personas';
 import {getAccuracy, getAverageElo} from '@lib/rizz/ratings';
 import {navigate, RizzRoute, setLeaveGuard} from '@components/rizz/router';
 import {profile, pushRating, RizzGameRecord, RizzOpponent, RizzTimeControl, saveGame, TIME_CONTROLS} from '@components/rizz/store';
@@ -32,16 +33,32 @@ function typingDelay(text: string) {
 
 const BOT_DIFFICULTY: RizzDifficulty = 'medium';
 
+const LAST_SCENARIO_KEY = 'rizz-last-scenario';
+
+/** Where you two met: one of the scenarios, not the one played last. */
+function pickSetting() {
+  let last: string;
+  try {
+    last = localStorage.getItem(LAST_SCENARIO_KEY);
+  } catch(err) {}
+  const pool = getScenarios().filter((scenario) => scenario.id !== last);
+  const scenario = pool[Math.floor(Math.random() * pool.length)];
+  try {
+    localStorage.setItem(LAST_SCENARIO_KEY, scenario.id);
+  } catch(err) {}
+  return scenario.setting;
+}
+
 export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'game'}>}) {
   const bot = props.route.botId ? getBot(props.route.botId) : undefined;
   const timeControl: RizzTimeControl = bot ? undefined : props.route.timeControl || 'blitz';
   const opponent: RizzOpponent = bot ?
-    {id: bot.id, name: bot.name, rating: bot.rating, color: bot.color, bot: true, personaId: bot.id, difficulty: BOT_DIFFICULTY} :
+    {id: bot.id, name: bot.name, rating: bot.rating, color: bot.color, bot: true, personaId: bot.id, difficulty: props.route.difficulty || BOT_DIFFICULTY} :
     findOpponent(timeControl);
-  const persona = getRizzPersona(opponent.personaId);
   const control = timeControl && TIME_CONTROLS[timeControl];
 
-  const [sim, setSim] = createSignal<SimState>(createSimulation(opponent.personaId, opponent.difficulty));
+  const setting = pickSetting();
+  const [sim, setSim] = createSignal<SimState>(createSimulationAt(opponent.personaId, opponent.difficulty, setting, opponent.name));
   const [typing, setTyping] = createSignal(false);
   const [waiting, setWaiting] = createSignal(false);
   const [over, setOver] = createSignal<{result: RizzResult, reason: RizzEndReason}>();
@@ -160,8 +177,10 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       updateMessage(id, {grading: false});
     });
 
+    let status: SimStatus;
     try {
       const answer = await getPersonaReply(snapshot, replyAbort.signal);
+      status = answer.status;
       if(!alive || over()) return;
       await new Promise((resolve) => setTimeout(resolve, 300));
       setWaiting(false);
@@ -178,6 +197,17 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
 
     await grading;
     if(!alive || over()) return;
+
+    // * a checkmate is theirs to give: a date the player declared and they never said yes to is presumptuous, not a win
+    if(sim().ending === 'checkmate' && status !== 'won' && sim().interest < SIM_WIN_INTEREST) {
+      setSim((state): SimState => ({
+        ...state,
+        ending: undefined,
+        messages: state.messages.map((message) => message.id === id && message.verdict?.rating === 'checkmate' ?
+          {...message, delta: undefined, verdict: {rating: 'mistake', elo: Math.min(message.verdict.elo, 700), reason: 'Declared a date they never agreed to'}} :
+          message)
+      }));
+    }
 
     const state = sim();
     if(state.ending) {
@@ -290,7 +320,7 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
       <Show when={profile.settings.vibeBar}>
         <VibeLine probability={sim().interest / 100} />
       </Show>
-      <Messages service={`${persona.name} · ${persona.tagline}\nYou open.`} items={items()} typing={typing()} />
+      <Messages service={`${setting}\nYou open.`} items={items()} typing={typing()} />
       <div class={styles.composer}>
         <Show when={!over()} fallback={
           <ActionPlate

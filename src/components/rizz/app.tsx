@@ -1,22 +1,22 @@
 /*
  * Rizzmate — the game this fork became, booted by `src/index.ts` instead of the messenger.
  *
- * The shell: Telegram's left column as the game's menu — modes and opponents as chats under a
- * burger and a search, folders as sections, the pencil for something new — and the open screen in
- * the middle column over the chat wallpaper.
+ * The shell: Telegram's left column as the game's menu — what to do, in a few sections (Play, Train, Compete), then
+ * your games as the chats they are — under a burger and a search (which finds the bots too), the pencil for a new
+ * game; the open screen in the middle column over the chat wallpaper.
  */
 
 import {createMemo, createSignal, For, JSX, Match, Show, Switch} from 'solid-js';
 import classNames from '@helpers/string/classNames';
 import {ButtonMenuToggleTsx} from '@components/buttonMenuToggleTsx';
 import InputSearch from '@components/inputSearch';
-import {IconTsx} from '@components/iconTsx';
 import LESSONS from '@components/rizz/content/lessons';
 import {dayKey} from '@components/rizz/engine';
 import {navigate, route, RizzRoute} from '@components/rizz/router';
 import {profile, touchVisit} from '@components/rizz/store';
 import {allBots, DIVISIONS, leagueTable, settleLeague, syncCustomPersonas} from '@components/rizz/world';
 import {Avatar, ListRow, menuItem, styles} from '@components/rizz/ui';
+import GameRow from '@components/rizz/gameRow';
 import {setSandboxTheme} from '@components/popupSandbox/environment';
 import {appSettings} from '@stores/appSettings';
 import GameScreen from '@components/rizz/screens/game';
@@ -28,20 +28,10 @@ import {ArchiveScreen, ProfileScreen, SettingsScreen} from '@components/rizz/scr
 import {BotsScreen, HomeScreen, PlayScreen} from '@components/rizz/screens/play';
 import BotMakerScreen from '@components/rizz/screens/botMaker';
 
-type Folder = 'all' | 'play' | 'train' | 'social';
-
-const FOLDERS: {id: Folder, label: string}[] = [
-  {id: 'all', label: 'All'},
-  {id: 'play', label: 'Play'},
-  {id: 'train', label: 'Train'},
-  {id: 'social', label: 'Social'}
-];
-
 type Entry = {
   key: string,
-  folder: Exclude<Folder, 'all'>,
   route: RizzRoute,
-  /** What the search matches. */
+  /** what the search matches */
   text: string,
   media: JSX.Element,
   title: JSX.Element,
@@ -51,13 +41,15 @@ type Entry = {
   pinned?: boolean
 };
 
+type Section = {label: string, entries: Entry[]};
+
 function isActive(entry: Entry) {
   const current = route();
   if(current.name === 'game' && entry.route.name === 'game') return current.botId === entry.route.botId;
   if(current.name === entry.route.name) return true;
   if(entry.route.name === 'play' && current.name === 'game' && !current.botId) return true;
+  if(entry.route.name === 'bots' && ((current.name === 'game' && current.botId) || current.name === 'botMaker')) return true;
   if(entry.route.name === 'lessons' && current.name === 'lesson') return true;
-  if(entry.route.name === 'archive' && current.name === 'review') return true;
   return false;
 }
 
@@ -67,7 +59,6 @@ function isNight() {
 }
 
 export default function RizzApp() {
-  const [folder, setFolder] = createSignal<Folder>('all');
   const [query, setQuery] = createSignal('');
 
   // * a visit counts for the streak; a new week settles last week's league
@@ -78,112 +69,112 @@ export default function RizzApp() {
 
   const search = new InputSearch({placeholder: 'Search', onChange: (value) => setQuery(value.trim().toLowerCase())});
 
-  const entries = createMemo<Entry[]>(() => {
+  const sections = createMemo<Section[]>(() => {
     const dailyDone = profile.daily.last === dayKey();
-    const lastGame = profile.games[0];
     const division = DIVISIONS[profile.league.division];
     const leagueRank = leagueTable().findIndex((entry) => entry.me) + 1;
+    const bots = allBots();
 
-    const list: Entry[] = [{
-      key: 'play',
-      folder: 'play',
-      pinned: true,
-      route: {name: 'play'},
-      text: 'play online rated bullet blitz rapid',
-      media: <Avatar icon="fire" color="blue" />,
-      title: 'Play Online',
-      subtitle: `Blitz ${profile.ratings.blitz} · Bullet ${profile.ratings.bullet} · Rapid ${profile.ratings.rapid}`
+    return [{
+      label: 'Play',
+      entries: [{
+        key: 'play',
+        route: {name: 'play'},
+        text: 'play online rated bullet blitz rapid',
+        media: <Avatar icon="fire" color="blue" />,
+        title: 'Play Online',
+        subtitle: `Rated · Blitz ${profile.ratings.blitz}`,
+        pinned: true
+      }, {
+        key: 'bots',
+        route: {name: 'bots'},
+        text: 'play bots ' + bots.map((bot) => bot.name.toLowerCase()).join(' '),
+        media: <Avatar icon="bots" color="green" />,
+        title: 'Play Bots',
+        subtitle: `${bots.length} bots · ${profile.beatenBots.length} beaten`,
+        pinned: true
+      }]
     }, {
-      key: 'daily',
-      folder: 'train',
-      pinned: dailyDone,
-      route: {name: 'daily'},
-      text: 'daily puzzle',
-      media: <Avatar icon="calendar" color="orange" />,
-      title: 'Daily Puzzle',
-      subtitle: dailyDone ? `Solved · ${profile.daily.streak} day streak` : 'Today\'s puzzle is waiting',
-      badge: !dailyDone && <span class={styles.unreadBadge}>1</span>
+      label: 'Train',
+      entries: [{
+        key: 'daily',
+        route: {name: 'daily'},
+        text: 'daily puzzle',
+        media: <Avatar icon="calendar" color="orange" />,
+        title: 'Daily Puzzle',
+        subtitle: dailyDone ? `Solved · ${profile.daily.streak} day streak` : 'Today\'s puzzle is waiting',
+        badge: !dailyDone && <span class={styles.unreadBadge}>1</span>
+      }, {
+        key: 'puzzles',
+        route: {name: 'puzzles'},
+        text: 'puzzles',
+        media: <Avatar icon="lamp" color="green" />,
+        title: 'Puzzles',
+        subtitle: `Write the best next message · ${profile.puzzlesSolved.length} solved`,
+        meta: String(profile.ratings.puzzles)
+      }, {
+        key: 'rush',
+        route: {name: 'rush'},
+        text: 'puzzle rush',
+        media: <Avatar icon="hourglass" color="red" />,
+        title: 'Puzzle Rush',
+        subtitle: profile.rushBest ? `Best ${profile.rushBest}` : '3 minutes, 3 strikes'
+      }, {
+        key: 'lessons',
+        route: {name: 'lessons'},
+        text: 'lessons coach rizzo learn',
+        media: <Avatar icon="channel" color="violet" />,
+        title: 'Lessons',
+        subtitle: `Coach Rizzo · ${profile.lessonsDone.length} of ${LESSONS.length} done`
+      }]
     }, {
-      key: 'puzzles',
-      folder: 'train',
-      route: {name: 'puzzles'},
-      text: 'puzzles',
-      media: <Avatar icon="lamp" color="green" />,
-      title: 'Puzzles',
-      subtitle: `Find the best reply · ${profile.puzzlesSolved.length} solved`,
-      meta: String(profile.ratings.puzzles)
-    }, {
-      key: 'rush',
-      folder: 'train',
-      route: {name: 'rush'},
-      text: 'puzzle rush',
-      media: <Avatar icon="hourglass" color="red" />,
-      title: 'Puzzle Rush',
-      subtitle: '3 minutes, 3 strikes',
-      meta: profile.rushBest ? `best ${profile.rushBest}` : undefined
-    }, {
-      key: 'lessons',
-      folder: 'train',
-      route: {name: 'lessons'},
-      text: 'lessons coach rizzo learn',
-      media: <Avatar icon="channel" color="violet" />,
-      title: 'Coach Rizzo',
-      subtitle: `Lessons · ${profile.lessonsDone.length} of ${LESSONS.length} done`
+      label: 'Compete',
+      entries: [{
+        key: 'leagues',
+        route: {name: 'leagues'},
+        text: 'leagues trophies ' + division.name.toLowerCase(),
+        media: <Avatar icon="crown" color="stars" />,
+        title: `${division.name} League`,
+        subtitle: `#${leagueRank} this week · ${profile.league.trophies} trophies`
+      }, {
+        key: 'leaderboard',
+        route: {name: 'leaderboard'},
+        text: 'leaderboard top',
+        media: <Avatar icon="poll" color="cyan" />,
+        title: 'Leaderboard',
+        subtitle: 'The world\'s best rizzers'
+      }]
     }];
-
-    for(const bot of allBots()) {
-      list.push({
-        key: 'bot-' + bot.id,
-        folder: 'play',
-        route: {name: 'game', botId: bot.id, key: 0},
-        text: 'bot ' + bot.name.toLowerCase(),
-        media: <Avatar name={bot.name} color={bot.color} />,
-        title: bot.name,
-        subtitle: bot.tagline,
-        meta: String(bot.rating),
-        badge: profile.beatenBots.includes(bot.id) && <IconTsx icon="check" class={styles.pinIcon} />
-      });
-    }
-
-    list.push({
-      key: 'leagues',
-      folder: 'social',
-      route: {name: 'leagues'},
-      text: 'leagues trophies ' + division.name.toLowerCase(),
-      media: <Avatar icon="crown" color="stars" />,
-      title: `${division.name} League`,
-      subtitle: `#${leagueRank} this week · ${profile.league.trophies} trophies`
-    }, {
-      key: 'leaderboard',
-      folder: 'social',
-      route: {name: 'leaderboard'},
-      text: 'leaderboard top',
-      media: <Avatar icon="poll" color="cyan" />,
-      title: 'Leaderboard',
-      subtitle: 'The world\'s best rizzers'
-    }, {
-      key: 'archive',
-      folder: 'social',
-      route: {name: 'archive'},
-      text: 'game archive history review',
-      media: <Avatar icon="archive" color="archive" />,
-      title: 'Game Archive',
-      subtitle: lastGame ?
-        `${lastGame.opponent.name}: ${lastGame.result === 'win' ? 'a date' : lastGame.result === 'draw' ? 'friendzoned' : 'ghosted'} · ${lastGame.accuracy.toFixed(0)}%` :
-        'Your games and their reviews',
-      meta: profile.games.length ? String(profile.games.length) : undefined
-    });
-
-    return list;
   });
 
-  const visible = () => {
+  // * searching finds the bots by name too, as chats to open
+  const searchResults = createMemo(() => {
     const q = query();
-    if(q) return entries().filter((entry) => entry.text.includes(q));
-    return folder() === 'all' ? entries() : entries().filter((entry) => entry.folder === folder());
+    if(!q) return;
+    const entries = sections().flatMap((section) => section.entries).filter((entry) => entry.text.includes(q));
+    const bots = allBots().filter((bot) => `${bot.name} ${bot.kind || ''}`.toLowerCase().includes(q));
+    const games = profile.games.filter((game) => game.opponent.name.toLowerCase().includes(q));
+    return {entries, bots, games};
+  });
+
+  const open = (entry: Entry) => navigate(entry.route);
+  const activeGameId = () => {
+    const current = route();
+    return current.name === 'review' ? current.gameId : undefined;
   };
 
-  const open = (entry: Entry) => navigate(entry.route.name === 'game' ? {...entry.route, key: Date.now()} : entry.route);
+  const renderEntry = (entry: Entry) => (
+    <ListRow
+      media={entry.media}
+      title={entry.title}
+      subtitle={entry.subtitle}
+      meta={entry.meta}
+      badge={entry.badge}
+      pinned={entry.pinned}
+      active={isActive(entry)}
+      onClick={() => open(entry)}
+    />
+  );
 
   return (
     <div class={classNames(styles.app, route().name === 'home' && styles.isHomeRoute)}>
@@ -193,6 +184,7 @@ export default function RizzApp() {
             icon="menu"
             direction="bottom-right"
             buttons={[
+              menuItem('message', 'Home', () => navigate({name: 'home'})),
               menuItem('user', 'My Profile', () => navigate({name: 'profile'})),
               menuItem('bots', 'Create a bot', () => navigate({name: 'botMaker'})),
               menuItem('archive', 'Game Archive', () => navigate({name: 'archive'})),
@@ -202,41 +194,44 @@ export default function RizzApp() {
           />
           {search.container}
         </div>
-        <Show when={!query()}>
-          <div class={styles.folders} role="tablist">
-            <For each={FOLDERS}>{(item) => (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={folder() === item.id}
-                class={classNames(styles.folder, folder() === item.id && styles.active)}
-                onClick={() => setFolder(item.id)}
-              >
-                {item.label}
-              </button>
-            )}</For>
-          </div>
-        </Show>
         <div class={styles.list}>
-          <For each={visible()}>{(entry) => (
-            <ListRow
-              media={entry.media}
-              title={entry.title}
-              subtitle={entry.subtitle}
-              meta={entry.meta}
-              badge={entry.badge}
-              pinned={entry.pinned}
-              active={isActive(entry)}
-              onClick={() => open(entry)}
-            />
-          )}</For>
+          <Show when={searchResults()} fallback={<>
+            <For each={sections()}>{(section) => <>
+              <div class={styles.listLabel}>{section.label}</div>
+              <For each={section.entries}>{renderEntry}</For>
+            </>}</For>
+            <Show when={profile.games.length}>
+              <div class={styles.listLabel}>Recent games</div>
+              <For each={profile.games.slice(0, 20)}>{(game) => <GameRow game={game} active={activeGameId() === game.id} />}</For>
+            </Show>
+          </>}>
+            {(results) => <>
+              <For each={results().entries}>{renderEntry}</For>
+              <Show when={results().bots.length}>
+                <div class={styles.listLabel}>Bots</div>
+                <For each={results().bots}>{(bot) => (
+                  <ListRow
+                    media={<Avatar name={bot.name} color={bot.color} />}
+                    title={bot.name}
+                    subtitle={bot.kind ? `${bot.kind} · ${bot.tagline}` : bot.tagline}
+                    meta={String(bot.rating)}
+                    onClick={() => navigate({name: 'bots', botId: bot.id})}
+                  />
+                )}</For>
+              </Show>
+              <Show when={results().games.length}>
+                <div class={styles.listLabel}>Games</div>
+                <For each={results().games}>{(game) => <GameRow game={game} />}</For>
+              </Show>
+            </>}
+          </Show>
         </div>
         <ButtonMenuToggleTsx
           class={styles.fab}
           icon="newchat_filled"
           direction="top-left"
           buttons={[
-            menuItem('fire', 'Quick game', () => navigate({name: 'game', timeControl: 'blitz', key: Date.now()})),
+            menuItem('fire', 'Quick game · Blitz', () => navigate({name: 'game', timeControl: 'blitz', key: Date.now()})),
             menuItem('bots', 'Play a bot', () => navigate({name: 'bots'})),
             menuItem('add', 'Create a bot', () => navigate({name: 'botMaker'}))
           ]}
@@ -246,7 +241,9 @@ export default function RizzApp() {
         <Switch>
           <Match when={route().name === 'home'}><HomeScreen /></Match>
           <Match when={route().name === 'play'}><PlayScreen /></Match>
-          <Match when={route().name === 'bots'}><BotsScreen /></Match>
+          <Match when={route().name === 'bots' && route() as Extract<RizzRoute, {name: 'bots'}>} keyed>
+            {(current) => <BotsScreen botId={current.botId} />}
+          </Match>
           <Match when={route().name === 'botMaker' && route() as Extract<RizzRoute, {name: 'botMaker'}>} keyed>
             {(current) => <BotMakerScreen botId={current.botId} />}
           </Match>

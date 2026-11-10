@@ -22,6 +22,7 @@ interface ImportMetaEnv {
   readonly VITE_OPENROUTER_BASE_URL?: string;
   readonly VITE_OPENROUTER_CLASSIFIER_MODEL?: string;
   readonly VITE_OPENROUTER_FAST_MODEL?: string;
+  readonly VITE_OPENROUTER_PERSONA_MODEL?: string;
   // injected via `define` by vite.preview.config.ts; absent in every other build
   readonly VITE_PREVIEW?: boolean;
   // injected via `define` by vite.preview.config.ts when start-preview.sh is

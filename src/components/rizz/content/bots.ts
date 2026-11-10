@@ -15,6 +15,8 @@ export type RizzBot = {
   color: RizzAvatarColor,
   /** the line under their name in the list, as a chat's last message */
   tagline: string,
+  /** what kind of texter they are: the persona's own title */
+  kind?: string,
   /** made in the bot maker: kept with the player's progress */
   custom?: boolean,
   /** a custom bot's character, as the persona prompt has it */
@@ -50,7 +52,8 @@ const PERSONA_COLORS: RizzAvatarColor[] = ['green', 'orange', 'cyan', 'pink', 'b
 export const BOTS: RizzBot[] = RIZZ_PERSONAS
 .map((persona, index) => ({
   id: persona.id,
-  name: persona.name.replace(/^The /, ''),
+  name: persona.firstName || persona.name.replace(/^The /, ''),
+  kind: persona.name.replace(/^The /, ''),
   rating: persona.elo,
   color: PERSONA_COLORS[index % PERSONA_COLORS.length],
   tagline: persona.tagline

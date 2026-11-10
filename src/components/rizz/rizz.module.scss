@@ -988,3 +988,98 @@
   line-height: 1.45;
   white-space: pre-wrap;
 }
+
+// * a section's title in the chat list, as Telegram heads its search results
+.listLabel {
+  padding: .75rem .75rem .25rem;
+  color: var(--secondary-text-color);
+  font-size: .875rem;
+  font-weight: var(--font-weight-bold);
+
+  &:first-child {
+    padding-top: .25rem;
+  }
+}
+
+.resultGlyph {
+  display: inline-flex;
+}
+
+// * Home: the hello, and a strip of bots to pick from
+.hello {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  padding: .5rem 1rem 0;
+}
+
+.helloName {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.botStrip {
+  display: flex;
+  gap: .75rem;
+  overflow-x: auto;
+  padding: .25rem 1rem .75rem;
+  scrollbar-width: none;
+}
+
+.botChip {
+  flex: 0 0 auto;
+  width: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: .25rem 0;
+  border-radius: .75rem;
+
+  &:hover {
+    background: var(--light-secondary-text-color);
+  }
+}
+
+.botChipName {
+  font-size: .8125rem;
+  font-weight: var(--font-weight-bold);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botChipRating {
+  font-size: .75rem;
+  color: var(--secondary-text-color);
+}
+
+.buttonRow {
+  display: flex;
+  gap: .5rem;
+  padding: 0 1rem;
+
+  > * {
+    flex: 1 1 0;
+    margin: 0 !important;
+    width: auto !important;
+  }
+}
+
+.selectedOuter {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+  border-radius: .75rem;
+}
+
+.bioText {
+  padding: 0 1rem .5rem;
+  font-size: .9375rem;
+  line-height: 1.4;
+}
