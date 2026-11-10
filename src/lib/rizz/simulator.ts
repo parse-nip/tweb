@@ -185,9 +185,13 @@ export async function getSimReport(state: SimState, signal?: AbortSignal): Promi
   verdicts.forEach((verdict) => counts[verdict.rating] = (counts[verdict.rating] || 0) + 1);
 
   const persona = getRizzPersona(state.personaId);
+  // * each side named outright: with bare "me:" and "them:" the model took the other person's lines for the user's
+  const them = persona.name.toUpperCase();
   const lines = state.messages.map((message) => {
     const def = message.verdict && getRizzRatingDef(message.verdict.rating);
-    return `${message.from}: ${message.text}${def ? `  [${def.title}]` : ''}`;
+    return message.from === 'me' ?
+      `USER: ${message.text}${def ? `  [${def.title}]` : ''}` :
+      `${them}: ${message.text}`;
   }).join('\n');
 
   let feedback = '';
@@ -199,7 +203,7 @@ export async function getSimReport(state: SimState, signal?: AbortSignal): Promi
       signal,
       messages: [
         {role: 'system', content: COACH_SYSTEM},
-        {role: 'user', content: `The user practised texting ${persona.name} (${state.difficulty}). Final interest: ${state.interest}/100.\n\n${lines}\n\nGive feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it), and one concrete thing to try next time. Then one rewrite of their worst message.`}
+        {role: 'user', content: `The user practised texting ${persona.name} (${state.difficulty}). Final interest: ${state.interest}/100.\n\n${lines}\n\nLines marked USER are the user's; lines marked ${them} are the simulated person's and are never the user's doing. Give feedback in 4-6 short sentences: what worked, the single biggest mistake (quote it — always a USER line, never a ${them} line), and one concrete thing to try next time. Then one rewrite of the user's worst USER message, written as the user would send it.`}
       ]
     })).trim();
   } catch(err) {

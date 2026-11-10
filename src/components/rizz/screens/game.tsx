@@ -250,7 +250,8 @@ export default function GameScreen(props: {route: Extract<RizzRoute, {name: 'gam
     text: message.text,
     out: message.from === 'me',
     time: times().get(message.id),
-    verdict: message.verdict || (message.grading ? 'pending' : undefined)
+    verdict: message.verdict || (message.grading ? 'pending' : undefined),
+    delta: message.delta
   })));
 
   const lines = createMemo(() => sim().messages.map((message) => ({mid: message.id, out: message.from === 'me', text: message.text})));

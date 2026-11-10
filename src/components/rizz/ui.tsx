@@ -3,7 +3,7 @@
  * with its tail, the topbar, the composer with the bot keyboard, a control plate, a pinned bar.
  */
 
-import {createEffect, createSignal, For, JSX, on, onCleanup, Show} from 'solid-js';
+import {createEffect, createRoot, createSignal, For, JSX, on, onCleanup, Show} from 'solid-js';
 import classNames from '@helpers/string/classNames';
 import Row from '@components/rowTsx';
 import Section from '@components/section';
@@ -14,12 +14,10 @@ import type {ButtonMenuItemOptionsVerifiable} from '@components/buttonMenu';
 import ChatInputPlate, {CHAT_INPUT_PLATE_SINGLE_CLASS} from '@components/chat/controlPlate';
 import InputField from '@components/inputField';
 import ripple from '@components/ripple';
+import {hotEffect} from '@helpers/hotModule';
 import createRatingGlyph from '@components/rizz/ratingGlyph';
 import badgeStyles from '@components/rizz/ratingBadge.module.scss';
 import {getRizzRatingDef, RizzVerdict} from '@lib/rizz/ratings';
-import type {RizzLine} from '@lib/rizz/classifier';
-import {getRizzSuggestion} from '@lib/rizz/suggest';
-import {toast} from '@components/toast';
 import {navigate} from '@components/rizz/router';
 import styles from '@components/rizz/rizz.module.scss';
 
@@ -203,21 +201,96 @@ export function Glyph(props: {verdict: RizzVerdict | RizzVerdict['rating'], size
   );
 }
 
-/** The chess label on a bubble's corner that faces the middle of the chat, as the Coach puts it on a chat's. */
-function BubbleBadge(props: {verdict: RizzVerdict | 'pending', out?: boolean}) {
+/*
+ * The chess label on a bubble's corner that faces the middle of the chat, as the Coach puts it on a chat's. Hovered,
+ * it rolls over into a pill with its label and the rating it moved; clicked, the coach's word on the message pops
+ * out — as the Rizz Coach's own demo rolls its badges. One is open at a time; a click anywhere else closes it.
+ */
+const [openBadge, setOpenBadge] = createRoot(() => createSignal<symbol>());
+
+function closeBadgeOnOutside(e: Event) {
+  if(!(e.target as HTMLElement)?.closest?.(`.${badgeStyles.badge}`)) setOpenBadge(undefined);
+}
+function closeBadgeOnEscape(e: KeyboardEvent) {
+  if(e.key === 'Escape' && openBadge()) setOpenBadge(undefined);
+}
+hotEffect(import.meta.hot, () => {
+  document.addEventListener('click', closeBadgeOnOutside);
+  document.addEventListener('keydown', closeBadgeOnEscape);
+  return () => {
+    document.removeEventListener('click', closeBadgeOnOutside);
+    document.removeEventListener('keydown', closeBadgeOnEscape);
+  };
+});
+
+/** What the coach says about a verdict: Jev answers with a label and how sure it is, a chat model with a sentence. */
+function explainVerdict(verdict: RizzVerdict) {
+  const def = getRizzRatingDef(verdict.rating);
+  const sure = verdict.reason?.match(/(\d+)% sure/)?.[1];
+  const sentence = verdict.reason && !sure ? verdict.reason : undefined;
+  const hint = def.hint.charAt(0).toUpperCase() + def.hint.slice(1) + '.';
+  return {def, sure, text: sentence ? sentence.replace(/^\w/, (c) => c.toUpperCase()) : hint};
+}
+
+function BubbleBadge(props: {verdict: RizzVerdict | 'pending', out?: boolean, delta?: number}) {
+  const id = Symbol();
+  const [flipped, setFlipped] = createSignal(false);
+  const isOpen = () => openBadge() === id;
+  onCleanup(() => isOpen() && setOpenBadge(undefined));
+  let element: HTMLButtonElement;
+
+  // * near the top of the chat the card has no room above: it opens under the badge
+  const place = () => {
+    const scroller = element.closest(`.${styles.scroll}`) || element.parentElement;
+    setFlipped(element.getBoundingClientRect().top - scroller.getBoundingClientRect().top < 140);
+  };
+
   return (
-    <span
-      class={classNames(badgeStyles.badge, props.out ? badgeStyles.isOut : badgeStyles.isIn, props.verdict === 'pending' && badgeStyles.isPending)}
-      title={props.verdict !== 'pending' ? describeVerdict(props.verdict) : 'Grading…'}
-      onClick={(e) => {
-        e.stopPropagation();
-        if(props.verdict !== 'pending') toast(describeVerdict(props.verdict));
-      }}
-    >
-      <Show when={props.verdict !== 'pending'} fallback={<span class={badgeStyles.pending} />}>
-        {createRatingGlyph(getRizzRatingDef((props.verdict as RizzVerdict).rating), !props.out)}
-      </Show>
-    </span>
+    <Show when={props.verdict !== 'pending'} fallback={
+      <span class={classNames(badgeStyles.badge, props.out ? badgeStyles.isOut : badgeStyles.isIn, badgeStyles.isPending)} aria-label="Grading…" role="img">
+        <span class={badgeStyles.pending} />
+      </span>
+    }>
+      {(() => {
+        const explained = () => explainVerdict(props.verdict as RizzVerdict);
+        const delta = () => props.delta !== undefined && props.delta !== 0 ? signed(props.delta) : undefined;
+        return (
+          <button
+            ref={element}
+            type="button"
+            class={classNames(
+              badgeStyles.badge,
+              props.out ? badgeStyles.isOut : badgeStyles.isIn,
+              isOpen() && badgeStyles.isOpen,
+              flipped() && badgeStyles.isFlipped
+            )}
+            style={{'--rizz-color': explained().def.color}}
+            aria-expanded={isOpen()}
+            aria-label={`${explained().def.title}${delta() ? `, ${delta()} rating` : ''}. ${explained().text}`}
+            onMouseEnter={place}
+            onFocus={place}
+            onClick={(e) => {
+              e.stopPropagation();
+              place();
+              setOpenBadge(isOpen() ? undefined : id);
+            }}
+          >
+            <span class={badgeStyles.ball}>{createRatingGlyph(explained().def, !props.out)}</span>
+            <span class={badgeStyles.label} aria-hidden="true">
+              {explained().def.title}
+              <Show when={delta()}><i>{delta()}</i></Show>
+            </span>
+            <span class={badgeStyles.why} aria-hidden="true" onClick={(e) => e.stopPropagation()}>
+              <span class={badgeStyles.whyTitle}>{explained().def.title}</span>
+              <span class={badgeStyles.whySub} style={{display: 'block'}}>
+                ~{(props.verdict as RizzVerdict).elo} Elo{explained().sure ? ` · ${explained().sure}% sure` : ''}{delta() ? ` · ${delta()} rating` : ''}
+              </span>
+              <span>{explained().text}</span>
+            </span>
+          </button>
+        );
+      })()}
+    </Show>
   );
 }
 
@@ -227,6 +300,8 @@ export type BubbleData = {
   time?: string,
   /** the Coach's label: a spinner while it is worked out */
   verdict?: RizzVerdict | 'pending',
+  /** what the message did to the player's Elo */
+  delta?: number,
   /** A line the chat says, not a person: "Seen", a result. */
   ghost?: boolean
 };
@@ -253,7 +328,7 @@ export function Bubble(props: BubbleData & {
       dir="auto"
     >
       <Show when={props.verdict} keyed>
-        {(verdict) => <BubbleBadge verdict={verdict} out={props.out} />}
+        {(verdict) => <BubbleBadge verdict={verdict} out={props.out} delta={props.delta} />}
       </Show>
       {props.text}
       <Show when={props.time && !props.ghost}>

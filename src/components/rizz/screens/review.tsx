@@ -27,12 +27,13 @@ export default function ReviewScreen(props: {gameId: string}) {
   const [selected, setSelected] = createSignal(0);
   // * retrying the selected message: undefined — not retrying, null — writing, else the new one's verdict
   const [retry, setRetry] = createSignal<{text?: string, verdict?: RizzVerdict, grading?: boolean} | null>();
-  const [feedback, setFeedback] = createSignal(game.feedback);
+  const [feedback, setFeedback] = createSignal(game.coachReview);
 
   const items = createMemo<BubbleData[]>(() => game.messages.map((message) => ({
     text: message.text,
     out: message.from === 'me',
-    verdict: message.verdict
+    verdict: message.verdict,
+    delta: message.delta
   })));
 
   const outIndexes = createMemo(() => items().map((item, index) => item.out ? index : -1).filter((index) => index !== -1));
@@ -90,7 +91,7 @@ export default function ReviewScreen(props: {gameId: string}) {
     const report = await getSimReport(state).catch((): undefined => undefined);
     if(!report?.feedback) return;
     setFeedback(report.feedback);
-    setProfile('games', (item) => item.id === game.id, 'feedback', report.feedback);
+    setProfile('games', (item) => item.id === game.id, 'coachReview', report.feedback);
   });
 
   const counts = createMemo(() => RIZZ_RATINGS.map((def) => ({def, count: mine.filter((item) => item.verdict?.rating === def.id).length})).filter((item) => item.count));

@@ -49,7 +49,7 @@ export type RizzGameRecord = {
   /** the mean Elo of the player's messages */
   gameRating: number,
   /** the coach's written review, once asked for */
-  feedback?: string
+  coachReview?: string
 };
 
 export type RizzProfile = {

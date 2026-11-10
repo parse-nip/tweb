@@ -1,5 +1,9 @@
+@use "../../scss/mixins" as *;
+
 // The chess label of a message: a round badge on the bubble's corner that faces the middle of the chat
 // (an outgoing bubble's start, an incoming one's end), as in r/TextingTheory. Logical, so it mirrors in RTL.
+// Hovered it rolls over into a pill with its label; clicked, the coach's word on it pops out above it (or under it,
+// near the top of the chat) — as the Rizz Coach's own demo rolls its badges.
 
 .badge {
   --rizz-color: #96af8b;
@@ -8,16 +12,21 @@
   top: -.5625rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  // the drawing is 18x19: the badge, and its shadow below
-  width: 1.5rem;
-  height: 1.6rem;
+  height: 1.5rem;
+  border-radius: .75rem;
   cursor: pointer;
   user-select: none;
   pointer-events: auto;
-  direction: ltr;
-  transition: transform .15s ease-out;
+  outline: none;
+  border: none;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: #fff;
+
+  @include animation-level-global(1) {
+    transition: background-color .22s, box-shadow .22s;
+  }
 
   &.isOut {
     inset-inline-start: -.625rem;
@@ -25,25 +34,165 @@
 
   &.isIn {
     inset-inline-end: -.625rem;
+    flex-direction: row-reverse;
   }
+
+  &.isPending {
+    width: 1.5rem;
+    border-radius: 50%;
+    justify-content: center;
+    background: rgba(128, 128, 128, .6);
+    box-shadow: 0 .0625rem .1875rem rgba(0, 0, 0, .3);
+    cursor: default;
+  }
+}
+
+// * the drawing is 18x19: the badge, and its shadow below
+.ball {
+  flex: 0 0 auto;
+  display: block;
+  width: 1.5rem;
+  height: 1.6rem;
+  pointer-events: none;
 
   img {
     display: block;
     width: 100%;
     height: 100%;
-    pointer-events: none;
   }
 
-  &.isPending {
+  @include animation-level-global(2) {
+    transition: transform .5s cubic-bezier(.3, 1.4, .5, 1);
+  }
+}
+
+.label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: .75rem;
+  font-weight: var(--font-weight-bold);
+
+  @include animation-level-global(1) {
+    transition: max-width .34s cubic-bezier(.3, 1.1, .4, 1), opacity .2s .06s;
+  }
+
+  i {
+    font-style: normal;
+    margin-inline-start: .375rem;
+    padding: 0 .3125rem;
+    border-radius: .5rem;
+    background: rgba(0, 0, 0, .2);
+  }
+}
+
+// * the roll: hovered, focused from the keyboard, or open
+.badge:not(.isPending) {
+  &:hover,
+  &:focus-visible,
+  &.isOpen {
+    background: var(--rizz-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+    z-index: 6;
+
+    .label {
+      max-width: 14rem;
+      opacity: 1;
+      padding-inline: .125rem .625rem;
+    }
+
+    .ball {
+      transform: rotate(360deg);
+    }
+  }
+
+  &.isIn:hover,
+  &.isIn:focus-visible,
+  &.isIn.isOpen {
+    .label {
+      padding-inline: .625rem .125rem;
+    }
+
+    .ball {
+      transform: rotate(-360deg);
+    }
+  }
+}
+
+// * the coach's word: a card like Telegram's menus, above the badge
+.why {
+  position: absolute;
+  bottom: calc(100% + .5rem);
+  width: 16rem;
+  max-width: calc(100vw - 3rem);
+  padding: .625rem .75rem;
+  border-radius: .75rem;
+  background: var(--surface-color);
+  color: var(--primary-text-color);
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .25);
+  font-size: .875rem;
+  line-height: 1.35;
+  font-weight: var(--font-weight-normal, 400);
+  white-space: normal;
+  text-align: start;
+  cursor: default;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  @include animation-level-global(1) {
+    transition: opacity .2s .05s, visibility 0s .25s;
+  }
+
+  @include animation-level-global(2) {
+    transform: translateY(.375rem) scale(.96);
+    transition: opacity .2s .05s, transform .28s cubic-bezier(.3, 1.3, .5, 1) .04s, visibility 0s .3s;
+  }
+
+  .isOut & {
+    inset-inline-start: 0;
+    transform-origin: var(--transform-origin-inline-start, left) bottom;
+  }
+
+  .isIn & {
+    inset-inline-end: 0;
+    transform-origin: var(--transform-origin-inline-end, right) bottom;
+  }
+
+  .isFlipped & {
+    bottom: auto;
+    top: calc(100% + .5rem);
+  }
+
+  .isOpen & {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+}
+
+.whyTitle {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  font-weight: var(--font-weight-bold);
+
+  &::before {
+    content: "";
+    width: .5rem;
+    height: .5rem;
     border-radius: 50%;
-    height: 1.5rem;
-    background: rgba(128, 128, 128, .6);
-    box-shadow: 0 .0625rem .1875rem rgba(0, 0, 0, .3);
+    background: var(--rizz-color);
   }
+}
 
-  &:hover {
-    transform: scale(1.14);
-  }
+.whySub {
+  color: var(--secondary-text-color);
+  font-size: .75rem;
+  margin: .125rem 0 .25rem;
 }
 
 .pending {
@@ -52,15 +201,14 @@
   border: .125rem solid rgba(255, 255, 255, .5);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin .8s linear infinite;
+
+  @include animation-level-global(1) {
+    animation: spin .8s linear infinite;
+  }
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
-}
-
-:global(.animation-level-0) .pending {
-  animation: none;
 }
